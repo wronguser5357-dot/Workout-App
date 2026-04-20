@@ -93,7 +93,7 @@ const KEY_LIFTS = [
 
 const STEPS = ['welcome','profile','goal','schedule','equipment','limitations','exercises','weights','done'];
 
-function OnboardingFlow({ onComplete }) {
+function OnboardingFlow({ onComplete, onStartFresh }) {
   const [step, setStep] = useState(0);
 
   const [name, setName] = useState('');
@@ -163,7 +163,7 @@ function OnboardingFlow({ onComplete }) {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: stepName === 'welcome' || stepName === 'done' ? 0 : '20px 24px 0' }}
            className="screen-scroll">
-        {stepName === 'welcome'     && <StepWelcome onStart={goNext} />}
+        {stepName === 'welcome'     && <StepWelcome onStart={goNext} onStartFresh={onStartFresh} />}
         {stepName === 'profile'     && <StepProfile name={name} setName={setName} experience={experience} setExperience={setExperience} />}
         {stepName === 'goal'        && <StepGoal goals={goals} toggleGoal={toggleGoal} />}
         {stepName === 'schedule'    && <StepSchedule daysPerWeek={daysPerWeek} setDaysPerWeek={setDaysPerWeek} />}
@@ -193,7 +193,13 @@ function OnboardingFlow({ onComplete }) {
   );
 }
 
-function StepWelcome({ onStart }) {
+function StepWelcome({ onStart, onStartFresh }) {
+  const hasExistingData = !!(
+    localStorage.getItem('wapp_history') ||
+    localStorage.getItem('wapp_weights') ||
+    localStorage.getItem('wapp_tweaks')
+  );
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100%', padding: '0 0 32px' }}>
       <div style={{ background: ACCENT, padding: '60px 32px 48px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
@@ -219,8 +225,16 @@ function StepWelcome({ onStart }) {
         ))}
 
         <button onClick={onStart} style={{ width: '100%', padding: '18px', borderRadius: 16, background: ACCENT, color: '#fff', border: 'none', fontWeight: 700, fontSize: 17, fontFamily: 'inherit', cursor: 'pointer', marginTop: 16 }}>
-          Get started →
+          Continue Setup →
         </button>
+
+        {hasExistingData && (
+          <button onClick={onStartFresh}
+            style={{ width: '100%', padding: '16px', borderRadius: 16, background: 'transparent', border: '1.5px solid #e8eaed', color: '#6b7280', fontWeight: 600, fontSize: 15, fontFamily: 'inherit', cursor: 'pointer', marginTop: 12 }}>
+            Start Fresh — clear all data
+          </button>
+        )}
+
         <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 12 }}>Takes about 3 minutes</p>
       </div>
     </div>

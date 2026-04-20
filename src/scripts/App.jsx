@@ -97,6 +97,17 @@ function App() {
     }));
   }
 
+  function handleStartFresh() {
+    const keys = ['wapp_profile','wapp_history','wapp_weights','wapp_tab','wapp_tweaks','wapp_program_swaps','wapp_day_names'];
+    keys.forEach(k => localStorage.removeItem(k));
+    setHistory([]);
+    setWeights({ ...DEFAULT_WEIGHTS });
+    setSavedSwaps({});
+    setSavedDayNames({});
+    setTab('home');
+    // onboarded is already false, so no change needed — just resets backing data
+  }
+
   function handleOnboardingComplete(profile) {
     localStorage.setItem('wapp_profile', JSON.stringify(profile));
     if (profile.liftWeights) {
@@ -110,7 +121,7 @@ function App() {
   }
 
   if (!onboarded) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+    return <OnboardingFlow onComplete={handleOnboardingComplete} onStartFresh={handleStartFresh} />;
   }
 
   const accent = tweaks.accentColor || '#478dff';
