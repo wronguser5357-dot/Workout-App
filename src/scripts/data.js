@@ -121,6 +121,15 @@ const SWAP_CANDIDATES = {
   calves:    [{ id: 'calf-raise', name: 'Standing Calf Raise' }],
 };
 
+// Which program slots feed the "Key Lifts" card on the Home screen.
+// histKey = the matching key in LIFT_HISTORY for the progression data.
+const KEY_LIFT_SLOTS = [
+  { histKey: 'Deadlift',      dayId: 'D', slotIdx: 0 },
+  { histKey: 'Machine Chest', dayId: 'B', slotIdx: 0 },
+  { histKey: 'Barbell Row',   dayId: 'C', slotIdx: 1 },
+  { histKey: 'Barbell OHP',   dayId: 'B', slotIdx: 3 },
+];
+
 // Applies saved exercise overrides to PROGRAM_DAYS.
 // overrides format: { "C:2": { id: "lat-pulldown", name: "Lat Pulldown (neutral)" }, ... }
 // where the key is dayId:slotIndex (position in the exercises array).
@@ -135,4 +144,4 @@ function applyProgramSwaps(days, overrides) {
   }));
 }
 
-Object.assign(window, { PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, SWAP_GROUPS, SWAP_CANDIDATES, applyProgramSwaps });
+Object.assign(window, { PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, KEY_LIFT_SLOTS, SWAP_GROUPS, SWAP_CANDIDATES, applyProgramSwaps });

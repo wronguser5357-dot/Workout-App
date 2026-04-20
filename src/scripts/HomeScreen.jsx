@@ -3,6 +3,8 @@
 // ============================================================
 
 function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DAYS }) {
+  const [expandedLift, setExpandedLift] = useState(null);
+
   const nextDay = (() => {
     const oneWeekAgo = Date.now() - 7 * 86400000;
     const recentIds = history.filter(h => h.date > oneWeekAgo).map(h => h.dayId);
@@ -20,6 +22,16 @@ function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DA
   })();
 
   const color = DAY_COLORS[nextDay.id];
+
+  // Build key lifts from program slots so swaps auto-update the displayed name
+  const keyLifts = KEY_LIFT_SLOTS.map(slot => {
+    const day = programDays.find(d => d.id === slot.dayId);
+    const ex  = day?.exercises[slot.slotIdx];
+    return {
+      name: ex?.name || slot.histKey,
+      data: LIFT_HISTORY[slot.histKey] || [],
+    };
+  }).filter(kl => kl.data.length > 0);
 
   return (
     <div style={{ padding: '28px 20px 0' }}>
@@ -63,23 +75,70 @@ function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DA
         ))}
       </div>
 
-      {/* Key lifts */}
+      {/* Key lifts — expandable */}
       <div style={{ background: '#fff', borderRadius: 18, padding: '18px 20px', marginBottom: 8, border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 16 }}>Key lifts</p>
-        {Object.entries(LIFT_HISTORY).map(([name, data]) => {
-          const current = data[data.length - 1];
-          const prev    = data[data.length - 2];
-          const up      = current > prev;
+
+        {keyLifts.map(({ name, data }) => {
+          const current  = data[data.length - 1];
+          const prev     = data[data.length - 2];
+          const up       = current > prev;
+          const isOpen   = expandedLift === name;
+
+          // Build weekly rows newest-first (up to 6 entries)
+          const weekRows = [...data].reverse().slice(0, 6).map((w, i) => ({
+            label: i === 0 ? 'Current' : i === 1 ? 'Last session' : `${i} sessions ago`,
+            weight: w,
+            isCurrent: i === 0,
+          }));
+          const maxW = Math.max(...data);
+
           return (
-            <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{name}</div>
-                <div style={{ fontSize: 13, marginTop: 1 }}>
-                  <span style={{ color: '#374151', fontWeight: 600 }}>{current} lb</span>
-                  {up && <span style={{ marginLeft: 8, fontSize: 11, color: '#478dff', fontWeight: 700, background: '#eff6ff', padding: '1px 6px', borderRadius: 4 }}>↑ +{current - prev}</span>}
+            <div key={name} style={{ marginBottom: isOpen ? 20 : 16 }}>
+              {/* Summary row — tap to expand */}
+              <button
+                onClick={() => setExpandedLift(isOpen ? null : name)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textAlign: 'left' }}
+              >
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{name}</div>
+                  <div style={{ fontSize: 13, marginTop: 1 }}>
+                    <span style={{ color: '#374151', fontWeight: 600 }}>{current} lb</span>
+                    {up && (
+                      <span style={{ marginLeft: 8, fontSize: 11, color: ACCENT, fontWeight: 700, background: '#eff6ff', padding: '1px 6px', borderRadius: 4 }}>
+                        ↑ +{current - prev}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <MiniChart data={data} color={ACCENT} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <MiniChart data={data} color={ACCENT} />
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </div>
+              </button>
+
+              {/* Expanded session history */}
+              {isOpen && (
+                <div style={{ marginTop: 14, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
+                  {weekRows.map(({ label, weight, isCurrent }) => {
+                    const barPct = maxW > 0 ? (weight / maxW) * 100 : 0;
+                    return (
+                      <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                        <span style={{ fontSize: 11, color: '#9ca3af', width: 96, flexShrink: 0 }}>{label}</span>
+                        <div style={{ flex: 1, height: 6, borderRadius: 3, background: '#f3f4f6', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${barPct}%`, borderRadius: 3, background: isCurrent ? ACCENT : ACCENT + '55', transition: 'width 0.4s' }} />
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: isCurrent ? 700 : 500, color: isCurrent ? '#111827' : '#6b7280', width: 52, textAlign: 'right', flexShrink: 0 }}>
+                          {weight} lb
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
