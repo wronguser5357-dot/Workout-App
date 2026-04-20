@@ -100,4 +100,73 @@ function NumStepper({ value, onChange, step = 2.5, min = 0, label, unit = 'lb', 
   );
 }
 
-Object.assign(window, { NavBar, WeekDots, MiniChart, RPEPills, NumStepper });
+// ---- SWAP SHEET (shared by WorkoutScreen + ProgramScreen) ----
+function SwapSheet({ exercise, onSwap, onClose, color }) {
+  const [custom, setCustom] = useState('');
+  const group      = SWAP_GROUPS[exercise.id];
+  const candidates = (SWAP_CANDIDATES[group] || []).filter(c => c.id !== exercise.id);
+  const trimmed    = custom.trim();
+
+  function handleCustomSwap() {
+    if (!trimmed) return;
+    onSwap({ id: 'custom-' + trimmed.toLowerCase().replace(/\s+/g, '-'), name: trimmed });
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 50 }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', zIndex: 51, maxHeight: '70%', display: 'flex', flexDirection: 'column', boxShadow: '0 -8px 40px rgba(0,0,0,0.12)' }}>
+
+        {/* Header */}
+        <div style={{ padding: '12px 20px 0', flexShrink: 0 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e8eaed', margin: '0 auto 16px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>Swap exercise</h3>
+              <p style={{ fontSize: 12, color: '#9ca3af' }}>Replacing: <span style={{ color: '#374151', fontWeight: 600 }}>{exercise.name}</span></p>
+            </div>
+            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          </div>
+
+          {/* Custom write-in */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <input
+              type="text"
+              placeholder="Type a custom exercise…"
+              value={custom}
+              onChange={e => setCustom(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCustomSwap()}
+              style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${trimmed ? color : '#e8eaed'}`, background: '#fafafa', color: '#111827', fontSize: 14, fontFamily: 'inherit', outline: 'none', transition: 'border-color 0.15s' }}
+            />
+            <button
+              onClick={handleCustomSwap}
+              disabled={!trimmed}
+              style={{ padding: '10px 16px', borderRadius: 10, background: trimmed ? color : '#f3f4f6', border: 'none', color: trimmed ? '#fff' : '#9ca3af', fontWeight: 700, fontSize: 13, fontFamily: 'inherit', cursor: trimmed ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0 }}>
+              Use
+            </button>
+          </div>
+
+          {candidates.length > 0 && (
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Suggestions</p>
+          )}
+        </div>
+
+        {/* Candidates list */}
+        <div style={{ overflowY: 'auto', padding: '0 20px 32px' }}>
+          {candidates.length === 0
+            ? <p style={{ fontSize: 14, color: '#9ca3af', textAlign: 'center', padding: '16px 0' }}>No suggestions — use the box above to enter any exercise.</p>
+            : candidates.map(c => (
+              <button key={c.id} onClick={() => onSwap(c)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: 12, background: '#f8f9fa', border: '1.5px solid #f0f0f0', marginBottom: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>{c.name}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </>
+  );
+}
+
+Object.assign(window, { NavBar, WeekDots, MiniChart, RPEPills, NumStepper, SwapSheet });
