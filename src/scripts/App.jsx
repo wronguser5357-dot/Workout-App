@@ -30,12 +30,17 @@ function App() {
     try { return JSON.parse(localStorage.getItem('wapp_program_swaps') || '{}'); }
     catch { return {}; }
   });
+  const [savedDayNames, setSavedDayNames] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wapp_day_names') || '{}'); }
+    catch { return {}; }
+  });
   const [tweaksVisible, setTweaksVisible] = useState(false);
 
   useEffect(() => { localStorage.setItem('wapp_tab', tab); }, [tab]);
   useEffect(() => { localStorage.setItem('wapp_history', JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem('wapp_weights', JSON.stringify(weights)); }, [weights]);
   useEffect(() => { localStorage.setItem('wapp_program_swaps', JSON.stringify(savedSwaps)); }, [savedSwaps]);
+  useEffect(() => { localStorage.setItem('wapp_day_names', JSON.stringify(savedDayNames)); }, [savedDayNames]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -109,8 +114,15 @@ function App() {
   }
 
   const accent = tweaks.accentColor || '#478dff';
-  // PROGRAM_DAYS with any saved exercise swaps applied
-  const effectiveDays = applyProgramSwaps(PROGRAM_DAYS, savedSwaps);
+  function handleRenameDay(dayId, newName) {
+    setSavedDayNames(prev => ({ ...prev, [dayId]: newName }));
+  }
+
+  // PROGRAM_DAYS with saved exercise swaps + custom day names applied
+  const effectiveDays = applyProgramSwaps(PROGRAM_DAYS, savedSwaps).map(day => ({
+    ...day,
+    name: savedDayNames[day.id] || day.name,
+  }));
 
   return (
     <>
@@ -126,7 +138,7 @@ function App() {
         <>
           <div className="screen-scroll">
             {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} programDays={effectiveDays} />}
-            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} />}
+            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} onEditSwap={handleSaveSwap} onRenameDay={handleRenameDay} />}
             {tab === 'history' && <HistoryScreen history={history} />}
             {tab === 'profile' && <ProfileScreen weights={weights} onUpdateWeight={handleUpdateWeight} onResetOnboarding={() => { localStorage.removeItem('wapp_profile'); setOnboarded(false); }} />}
           </div>
