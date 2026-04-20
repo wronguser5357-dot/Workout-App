@@ -336,7 +336,49 @@ function ProfileScreen({ weights, onUpdateWeight, onResetOnboarding }) {
       <button onClick={onResetOnboarding} style={{ marginBottom: 24, padding: '10px 16px', borderRadius: 10, background: '#fff', border: '1.5px solid #e8eaed', color: '#6b7280', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
         ↩ Redo full setup
       </button>
+
+      {/* Danger zone */}
+      <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24, marginBottom: 40 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 }}>Danger zone</p>
+        <DeleteAllButton onResetOnboarding={onResetOnboarding} />
+      </div>
     </div>
+  );
+}
+
+function DeleteAllButton({ onResetOnboarding }) {
+  const [confirming, setConfirming] = useState(false);
+
+  function handleDelete() {
+    const keys = ['wapp_profile','wapp_history','wapp_weights','wapp_tab','wapp_tweaks','wapp_program_swaps','wapp_day_names'];
+    keys.forEach(k => localStorage.removeItem(k));
+    onResetOnboarding();
+  }
+
+  if (confirming) {
+    return (
+      <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 14, padding: '16px 18px' }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Delete everything?</p>
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>This removes all history, weights, and settings. It cannot be undone.</p>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={handleDelete}
+            style={{ flex: 1, padding: '11px', borderRadius: 10, background: '#ef4444', border: 'none', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Yes, delete all data
+          </button>
+          <button onClick={() => setConfirming(false)}
+            style={{ padding: '11px 18px', borderRadius: 10, background: '#fff', border: '1.5px solid #e8eaed', color: '#6b7280', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => setConfirming(true)}
+      style={{ width: '100%', padding: '12px 16px', borderRadius: 12, background: 'transparent', border: '1.5px solid #fca5a5', color: '#ef4444', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+      🗑 Delete all data &amp; start fresh
+    </button>
   );
 }
 
