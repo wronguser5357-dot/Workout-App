@@ -76,6 +76,16 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onSaveSwap }) {
     setSessionExercises(prev => prev.map((ex, i) => i === ei ? { ...ex, sets: ex.sets + 1 } : ex));
   }
 
+  function deleteSet(ei, si) {
+    if (sets[ei].length <= 1) return; // keep at least 1 set
+    setSets(prev => {
+      const next = prev.map(e => e.map(s => ({ ...s })));
+      next[ei] = next[ei].filter((_, i) => i !== si);
+      return next;
+    });
+    setSessionExercises(prev => prev.map((ex, i) => i === ei ? { ...ex, sets: ex.sets - 1 } : ex));
+  }
+
   function handleSwap(newEx) {
     const origEx = sessionExercises[swappingExIdx];
     setSessionExercises(prev => prev.map((ex, i) =>
@@ -237,6 +247,7 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onSaveSwap }) {
               editingCell={editingCell} setEditingCell={setEditingCell}
               onUpdateSet={updateSet} onLogSet={logSet} onAddSet={addSet}
               onSwap={() => setSwappingExIdx(ei)}
+              onDeleteSet={(si) => deleteSet(ei, si)}
               savedToPlan={!!savedToPlans[ei]}
               onSaveToPlan={() => {
                 setSavedToPlans(prev => ({ ...prev, [ei]: true }));
@@ -260,8 +271,72 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onSaveSwap }) {
   );
 }
 
+// ---- SWIPEABLE SET ROW ----
+function SwipeableSetRow({ children, onDelete, isLast }) {
+  const [offset, setOffset]     = useState(0);
+  const startX     = useRef(null);
+  const startY     = useRef(null);
+  const startOff   = useRef(0);
+  const dragging   = useRef(false);
+  const direction  = useRef(null); // 'h' | 'v' | null
+  const DELETE_W   = 72;
+  const THRESHOLD  = 36;
+
+  function onTouchStart(e) {
+    startX.current   = e.touches[0].clientX;
+    startY.current   = e.touches[0].clientY;
+    startOff.current = offset;
+    dragging.current = true;
+    direction.current = null;
+  }
+
+  function onTouchMove(e) {
+    if (!dragging.current) return;
+    const dx = e.touches[0].clientX - startX.current;
+    const dy = Math.abs(e.touches[0].clientY - startY.current);
+
+    if (direction.current === null) {
+      if (Math.abs(dx) > 4 || dy > 4)
+        direction.current = Math.abs(dx) > dy ? 'h' : 'v';
+      return;
+    }
+    if (direction.current === 'v') return;
+
+    e.preventDefault();
+    setOffset(Math.max(0, Math.min(DELETE_W, startOff.current - dx)));
+  }
+
+  function onTouchEnd() {
+    dragging.current = false;
+    setOffset(prev => prev > THRESHOLD ? DELETE_W : 0);
+  }
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f8f9fa' }}>
+      {/* Red delete zone */}
+      <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_W, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button
+          onClick={() => { setOffset(0); onDelete(); }}
+          style={{ width: '100%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+          </svg>
+        </button>
+      </div>
+      {/* Sliding content */}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ transform: `translateX(-${offset}px)`, transition: dragging.current ? 'none' : 'transform 0.22s ease', background: 'inherit' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ---- EXERCISE CARD ----
-function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, setEditingCell, onUpdateSet, onLogSet, onAddSet, onSwap, savedToPlan, onSaveToPlan }) {
+function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, setEditingCell, onUpdateSet, onLogSet, onAddSet, onSwap, onDeleteSet, savedToPlan, onSaveToPlan }) {
   return (
     <div style={{ background: '#fff', borderRadius: 18, margin: '0 16px 14px', border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden', opacity: allLogged ? 0.7 : 1, transition: 'opacity 0.2s' }}>
       {/* Header */}
@@ -300,7 +375,8 @@ function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, 
         const prevText   = prevSet ? `${prevSet.weight > 0 ? prevSet.weight + ' × ' : ''}${prevSet.reps}` : '—';
 
         return (
-          <div key={si} style={{ display: 'grid', gridTemplateColumns: '28px 80px 1fr 64px 64px 36px', gap: 0, padding: '11px 18px', borderBottom: si < exSets.length - 1 ? '1px solid #f8f9fa' : 'none', background: isLogged ? color + '08' : '#fff', alignItems: 'center', transition: 'background 0.2s' }}>
+          <SwipeableSetRow key={si} isLast={si === exSets.length - 1} onDelete={() => onDeleteSet(si)}>
+          <div style={{ display: 'grid', gridTemplateColumns: '28px 80px 1fr 64px 64px 36px', gap: 0, padding: '11px 18px', background: isLogged ? color + '08' : '#fff', alignItems: 'center', transition: 'background 0.2s' }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: isLogged ? color : '#9ca3af' }}>{si + 1}</span>
             <span style={{ fontSize: 13, color: '#9ca3af' }}>{prevText}</span>
             <span style={{ fontSize: 13, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.repRange}</span>
@@ -343,6 +419,7 @@ function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, 
               </button>
             </div>
           </div>
+          </SwipeableSetRow>
         );
       })}
 
@@ -381,42 +458,6 @@ function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, 
         )}
       </div>
     </div>
-  );
-}
-
-// ---- SWAP SHEET ----
-function SwapSheet({ exercise, onSwap, onClose, color }) {
-  const group      = SWAP_GROUPS[exercise.id];
-  const candidates = (SWAP_CANDIDATES[group] || []).filter(c => c.id !== exercise.id);
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 50 }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', zIndex: 51, maxHeight: '65%', display: 'flex', flexDirection: 'column', boxShadow: '0 -8px 40px rgba(0,0,0,0.12)' }}>
-        <div style={{ padding: '12px 20px 0', flexShrink: 0 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e8eaed', margin: '0 auto 16px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>Swap exercise</h3>
-              <p style={{ fontSize: 12, color: '#9ca3af' }}>Replacing: <span style={{ color: '#374151', fontWeight: 600 }}>{exercise.name}</span></p>
-            </div>
-            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-          </div>
-        </div>
-        <div style={{ overflowY: 'auto', padding: '12px 20px 32px' }}>
-          {candidates.length === 0
-            ? <p style={{ fontSize: 14, color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>No alternatives found.</p>
-            : candidates.map(c => (
-              <button key={c.id} onClick={() => onSwap(c)}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: 12, background: '#f8f9fa', border: '1.5px solid #f0f0f0', marginBottom: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>{c.name}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </button>
-            ))
-          }
-        </div>
-      </div>
-    </>
   );
 }
 
