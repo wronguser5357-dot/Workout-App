@@ -40,13 +40,15 @@ function WorkoutScreen({ day, weights, onComplete, onClose }) {
   }
 
   function logSet(ei, si) {
+    const wasLogged = sets[ei][si].logged;
     setSets(prev => {
       const next = prev.map(e => e.map(s => ({ ...s })));
-      next[ei][si].logged = true;
+      next[ei][si].logged = !wasLogged;
       return next;
     });
     setEditingCell(null);
-    setRestTimer({ secs: 90, total: 90 });
+    // Only start rest timer when checking, not unchecking
+    if (!wasLogged) setRestTimer({ secs: 90, total: 90 });
   }
 
   function addSet(ei) {
@@ -312,8 +314,8 @@ function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, 
 
             {/* Check */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <button onClick={() => !isLogged && onLogSet(ei, si)}
-                style={{ width: 32, height: 32, borderRadius: '50%', background: isLogged ? color : '#f3f4f6', border: isLogged ? 'none' : '1.5px solid #e8eaed', cursor: isLogged ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+              <button onClick={() => onLogSet(ei, si)}
+                style={{ width: 32, height: 32, borderRadius: '50%', background: isLogged ? color : '#f3f4f6', border: isLogged ? 'none' : '1.5px solid #e8eaed', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={isLogged ? '#fff' : '#9ca3af'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
             </div>
