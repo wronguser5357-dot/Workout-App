@@ -21,12 +21,26 @@ function WorkoutScreen({ day, weights, onComplete, onClose }) {
   const [phase, setPhase]                       = useState('working');
   const [editingCell, setEditingCell]           = useState(null);
   const startTime = useRef(Date.now());
+  const [elapsed, setElapsed] = useState(0);
+
+  // Tick the elapsed timer every second while working
+  useEffect(() => {
+    if (phase !== 'working') return;
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTime.current) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [phase]);
 
   useEffect(() => {
     if (!restTimer || restTimer.secs <= 0) return;
     const t = setTimeout(() => setRestTimer(r => r ? { ...r, secs: r.secs - 1 } : null), 1000);
     return () => clearTimeout(t);
   }, [restTimer]);
+
+  function formatElapsed(secs) {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
 
   const loggedCount = sets.flat().filter(s => s.logged).length;
   const totalSets   = sets.flat().length;
@@ -173,7 +187,10 @@ function WorkoutScreen({ day, weights, onComplete, onClose }) {
             <div style={{ height: '100%', width: `${(loggedCount / totalSets) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s' }} />
           </div>
         </div>
-        <span style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, flexShrink: 0 }}>{loggedCount}/{totalSets}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: '#111827', letterSpacing: '0.02em', fontVariantNumeric: 'tabular-nums' }}>{formatElapsed(elapsed)}</span>
+          <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>{loggedCount}/{totalSets} sets</span>
+        </div>
         <button onClick={() => setPhase('complete')}
           style={{ padding: '6px 14px', borderRadius: 8, background: color, border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
           Finish
