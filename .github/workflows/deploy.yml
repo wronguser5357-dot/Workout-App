@@ -1,0 +1,44 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; don't cancel in-progress runs
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Regenerate icons at deploy time (no binary blobs in git required)
+      - name: Generate icons
+        run: node generate-icons.js
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # Deploy the src/ directory as the site root
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: src
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4

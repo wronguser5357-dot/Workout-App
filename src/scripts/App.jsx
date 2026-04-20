@@ -1,0 +1,150 @@
+// ============================================================
+// APP ROOT
+// ============================================================
+
+const { useState, useEffect, useRef } = React;
+
+const TWEAK_DEFAULTS = {
+  unit: 'lb',
+  restDuration: 75,
+  accentColor: '#478dff',
+};
+
+function App() {
+  const [onboarded, setOnboarded] = useState(() => !!localStorage.getItem('wapp_profile'));
+  const [tab, setTab]             = useState(() => localStorage.getItem('wapp_tab') || 'home');
+  const [activeWorkout, setActiveWorkout] = useState(null);
+  const [tweaks, setTweaks] = useState(() => {
+    try { return { ...TWEAK_DEFAULTS, ...JSON.parse(localStorage.getItem('wapp_tweaks') || '{}') }; }
+    catch { return TWEAK_DEFAULTS; }
+  });
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wapp_history')) || makeSeedHistory(); }
+    catch { return makeSeedHistory(); }
+  });
+  const [weights, setWeights] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wapp_weights')) || { ...DEFAULT_WEIGHTS }; }
+    catch { return { ...DEFAULT_WEIGHTS }; }
+  });
+  const [tweaksVisible, setTweaksVisible] = useState(false);
+
+  useEffect(() => { localStorage.setItem('wapp_tab', tab); }, [tab]);
+  useEffect(() => { localStorage.setItem('wapp_history', JSON.stringify(history)); }, [history]);
+  useEffect(() => { localStorage.setItem('wapp_weights', JSON.stringify(weights)); }, [weights]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode')   setTweaksVisible(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweaksVisible(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  // Reset stale lime-green accent
+  useEffect(() => {
+    if (tweaks.accentColor === '#d4ff47') {
+      updateTweak('accentColor', '#478dff');
+    }
+  }, []);
+
+  function updateTweak(key, val) {
+    const next = { ...tweaks, [key]: val };
+    setTweaks(next);
+    localStorage.setItem('wapp_tweaks', JSON.stringify(next));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: next }, '*');
+  }
+
+  function handleStartWorkout(day) { setActiveWorkout(day); }
+
+  function handleWorkoutComplete(result) {
+    setHistory(prev => [...prev, {
+      id: 'h' + Date.now(),
+      dayId: result.dayId, name: result.name, date: result.date,
+      sets: result.sets, duration: result.duration || 55, topLifts: result.topLifts || [],
+    }]);
+    if (result.weightUpdates) {
+      setWeights(prev => {
+        const next = { ...prev };
+        Object.entries(result.weightUpdates).forEach(([id, { w }]) => { next[id] = { w }; });
+        return next;
+      });
+    }
+    setActiveWorkout(null);
+  }
+
+  function handleUpdateWeight(id, val) {
+    setWeights(prev => ({ ...prev, [id]: { w: val } }));
+  }
+
+  function handleOnboardingComplete(profile) {
+    localStorage.setItem('wapp_profile', JSON.stringify(profile));
+    if (profile.liftWeights) {
+      setWeights(prev => {
+        const next = { ...prev };
+        Object.entries(profile.liftWeights).forEach(([id, w]) => { next[id] = { w }; });
+        return next;
+      });
+    }
+    setOnboarded(true);
+  }
+
+  if (!onboarded) {
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  }
+
+  const accent = tweaks.accentColor || '#478dff';
+
+  return (
+    <>
+      {activeWorkout ? (
+        <WorkoutScreen
+          day={activeWorkout}
+          weights={weights}
+          onComplete={handleWorkoutComplete}
+          onClose={() => setActiveWorkout(null)}
+        />
+      ) : (
+        <>
+          <div className="screen-scroll">
+            {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} />}
+            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} />}
+            {tab === 'history' && <HistoryScreen history={history} />}
+            {tab === 'profile' && <ProfileScreen weights={weights} onUpdateWeight={handleUpdateWeight} onResetOnboarding={() => { localStorage.removeItem('wapp_profile'); setOnboarded(false); }} />}
+          </div>
+          <NavBar tab={tab} setTab={setTab} workoutActive={false} />
+        </>
+      )}
+
+      {/* Tweaks panel */}
+      <div id="tweaks-panel" className={tweaksVisible ? 'visible' : ''}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>Tweaks</p>
+        <div className="tweak-row">
+          <span className="tweak-label">Use kilograms</span>
+          <button className="tweak-toggle" onClick={() => updateTweak('unit', tweaks.unit === 'kg' ? 'lb' : 'kg')}
+            style={{ background: tweaks.unit === 'kg' ? accent : '#333' }}>
+            <span style={{ left: tweaks.unit === 'kg' ? 21 : 3 }} />
+          </button>
+        </div>
+        <div className="tweak-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+          <span className="tweak-label">Rest timer: {tweaks.restDuration}s</span>
+          <input type="range" min={30} max={180} step={15} value={tweaks.restDuration}
+            onChange={e => updateTweak('restDuration', Number(e.target.value))}
+            style={{ width: '100%', accentColor: accent }} />
+        </div>
+        <div className="tweak-row">
+          <span className="tweak-label">Accent</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {['#478dff','#f97316','#0891b2','#7c3aed'].map(c => (
+              <button key={c} onClick={() => updateTweak('accentColor', c)}
+                style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: tweaks.accentColor === c ? '2px solid #fff' : '2px solid transparent', outline: tweaks.accentColor === c ? `2px solid ${c}` : 'none', cursor: 'pointer' }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);

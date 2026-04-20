@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- viewport-fit=cover lets content fill behind the iOS status bar -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Connor's Workout</title>
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Workout">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+
+  <!-- Theme color (Android Chrome + Safari 15+) -->
+  <meta name="theme-color" content="#478dff">
+
+  <!-- Prevent phone number detection -->
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles/main.css">
+
+  <!-- React + Babel (no build step) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <!-- Data layer (plain JS) -->
+  <script src="scripts/data.js"></script>
+
+  <!-- Service worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+  </script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- JSX components, in dependency order -->
+<script src="scripts/components.jsx"        type="text/babel"></script>
+<script src="scripts/Onboarding.jsx"        type="text/babel"></script>
+<script src="scripts/HomeScreen.jsx"        type="text/babel"></script>
+<script src="scripts/ProgramScreen.jsx"     type="text/babel"></script>
+<script src="scripts/WorkoutScreen.jsx"     type="text/babel"></script>
+<script src="scripts/HistoryAndProfile.jsx" type="text/babel"></script>
+<script src="scripts/App.jsx"               type="text/babel"></script>
+</body>
+</html>
