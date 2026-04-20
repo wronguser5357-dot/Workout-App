@@ -121,4 +121,18 @@ const SWAP_CANDIDATES = {
   calves:    [{ id: 'calf-raise', name: 'Standing Calf Raise' }],
 };
 
-Object.assign(window, { PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, SWAP_GROUPS, SWAP_CANDIDATES });
+// Applies saved exercise overrides to PROGRAM_DAYS.
+// overrides format: { "C:2": { id: "lat-pulldown", name: "Lat Pulldown (neutral)" }, ... }
+// where the key is dayId:slotIndex (position in the exercises array).
+function applyProgramSwaps(days, overrides) {
+  if (!overrides || Object.keys(overrides).length === 0) return days;
+  return days.map(day => ({
+    ...day,
+    exercises: day.exercises.map((ex, i) => {
+      const override = overrides[`${day.id}:${i}`];
+      return override ? { ...ex, id: override.id, name: override.name } : ex;
+    })
+  }));
+}
+
+Object.assign(window, { PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, SWAP_GROUPS, SWAP_CANDIDATES, applyProgramSwaps });

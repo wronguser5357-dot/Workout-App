@@ -2,11 +2,11 @@
 // HOME SCREEN
 // ============================================================
 
-function HomeScreen({ history, onStartWorkout, weights }) {
+function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DAYS }) {
   const nextDay = (() => {
     const oneWeekAgo = Date.now() - 7 * 86400000;
     const recentIds = history.filter(h => h.date > oneWeekAgo).map(h => h.dayId);
-    return PROGRAM_DAYS.find(d => !recentIds.includes(d.id)) || PROGRAM_DAYS[0];
+    return programDays.find(d => !recentIds.includes(d.id)) || programDays[0];
   })();
 
   const totalSets     = history.reduce((a, b) => a + b.sets, 0);

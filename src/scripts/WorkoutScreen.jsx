@@ -2,7 +2,7 @@
 // ACTIVE WORKOUT SCREEN
 // ============================================================
 
-function WorkoutScreen({ day, weights, onComplete, onClose }) {
+function WorkoutScreen({ day, weights, onComplete, onClose, onSaveSwap }) {
   const color = DAY_COLORS[day.id];
 
   const initSets = () => day.exercises.map(ex => {
@@ -14,7 +14,8 @@ function WorkoutScreen({ day, weights, onComplete, onClose }) {
   });
 
   const [sessionExercises, setSessionExercises] = useState(day.exercises);
-  const [swappedIds, setSwappedIds]             = useState({});
+  const [swappedIds, setSwappedIds]             = useState({}); // { [ei]: origExercise }
+  const [savedToPlans, setSavedToPlans]         = useState({}); // { [ei]: true } after saving
   const [sets, setSets]                         = useState(initSets);
   const [swappingExIdx, setSwappingExIdx]       = useState(null);
   const [restTimer, setRestTimer]               = useState(null);
@@ -80,7 +81,7 @@ function WorkoutScreen({ day, weights, onComplete, onClose }) {
     setSessionExercises(prev => prev.map((ex, i) =>
       i === swappingExIdx ? { ...newEx, sets: ex.sets, repRange: ex.repRange, rpe: ex.rpe } : ex
     ));
-    setSwappedIds(prev => ({ ...prev, [swappingExIdx]: origEx.name }));
+    setSwappedIds(prev => ({ ...prev, [swappingExIdx]: origEx })); // store full origEx for save
     setSets(prev => {
       const next = prev.map(e => e.map(s => ({ ...s })));
       const w = weights[newEx.id]?.w ?? DEFAULT_WEIGHTS[newEx.id]?.w ?? 0;
@@ -236,6 +237,11 @@ function WorkoutScreen({ day, weights, onComplete, onClose }) {
               editingCell={editingCell} setEditingCell={setEditingCell}
               onUpdateSet={updateSet} onLogSet={logSet} onAddSet={addSet}
               onSwap={() => setSwappingExIdx(ei)}
+              savedToPlan={!!savedToPlans[ei]}
+              onSaveToPlan={() => {
+                setSavedToPlans(prev => ({ ...prev, [ei]: true }));
+                onSaveSwap && onSaveSwap(day.id, ei, sessionExercises[ei]);
+              }}
             />
           );
         })}
@@ -255,7 +261,7 @@ function WorkoutScreen({ day, weights, onComplete, onClose }) {
 }
 
 // ---- EXERCISE CARD ----
-function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, setEditingCell, onUpdateSet, onLogSet, onAddSet, onSwap }) {
+function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, setEditingCell, onUpdateSet, onLogSet, onAddSet, onSwap, savedToPlan, onSaveToPlan }) {
   return (
     <div style={{ background: '#fff', borderRadius: 18, margin: '0 16px 14px', border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden', opacity: allLogged ? 0.7 : 1, transition: 'opacity 0.2s' }}>
       {/* Header */}
@@ -355,6 +361,24 @@ function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, 
           </svg>
           Swap
         </button>
+
+        {/* Save to plan — only visible after a swap */}
+        {swapped && (
+          savedToPlan ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: color }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Saved to plan
+            </span>
+          ) : (
+            <button onClick={onSaveToPlan}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Save to plan
+            </button>
+          )
+        )}
       </div>
     </div>
   );

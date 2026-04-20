@@ -26,11 +26,16 @@ function App() {
     try { return JSON.parse(localStorage.getItem('wapp_weights')) || { ...DEFAULT_WEIGHTS }; }
     catch { return { ...DEFAULT_WEIGHTS }; }
   });
+  const [savedSwaps, setSavedSwaps] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wapp_program_swaps') || '{}'); }
+    catch { return {}; }
+  });
   const [tweaksVisible, setTweaksVisible] = useState(false);
 
   useEffect(() => { localStorage.setItem('wapp_tab', tab); }, [tab]);
   useEffect(() => { localStorage.setItem('wapp_history', JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem('wapp_weights', JSON.stringify(weights)); }, [weights]);
+  useEffect(() => { localStorage.setItem('wapp_program_swaps', JSON.stringify(savedSwaps)); }, [savedSwaps]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -78,6 +83,15 @@ function App() {
     setWeights(prev => ({ ...prev, [id]: { w: val } }));
   }
 
+  // Permanently saves a mid-workout swap to the program plan.
+  // slotIdx = position of the exercise in the day's exercise list.
+  function handleSaveSwap(dayId, slotIdx, newEx) {
+    setSavedSwaps(prev => ({
+      ...prev,
+      [`${dayId}:${slotIdx}`]: { id: newEx.id, name: newEx.name },
+    }));
+  }
+
   function handleOnboardingComplete(profile) {
     localStorage.setItem('wapp_profile', JSON.stringify(profile));
     if (profile.liftWeights) {
@@ -95,6 +109,8 @@ function App() {
   }
 
   const accent = tweaks.accentColor || '#478dff';
+  // PROGRAM_DAYS with any saved exercise swaps applied
+  const effectiveDays = applyProgramSwaps(PROGRAM_DAYS, savedSwaps);
 
   return (
     <>
@@ -104,12 +120,13 @@ function App() {
           weights={weights}
           onComplete={handleWorkoutComplete}
           onClose={() => setActiveWorkout(null)}
+          onSaveSwap={handleSaveSwap}
         />
       ) : (
         <>
           <div className="screen-scroll">
-            {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} />}
-            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} />}
+            {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} programDays={effectiveDays} />}
+            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} />}
             {tab === 'history' && <HistoryScreen history={history} />}
             {tab === 'profile' && <ProfileScreen weights={weights} onUpdateWeight={handleUpdateWeight} onResetOnboarding={() => { localStorage.removeItem('wapp_profile'); setOnboarded(false); }} />}
           </div>

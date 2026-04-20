@@ -2,7 +2,7 @@
 // PROGRAM SCREEN
 // ============================================================
 
-function ProgramScreen({ onStartWorkout, history }) {
+function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS }) {
   const [expanded, setExpanded] = useState(null);
   const oneWeekAgo = Date.now() - 7 * 86400000;
   const recentIds  = history.filter(h => h.date > oneWeekAgo).map(h => h.dayId);
@@ -12,7 +12,7 @@ function ProgramScreen({ onStartWorkout, history }) {
       <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4, color: '#111827' }}>4-Day Split</h1>
       <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 24 }}>Upper / Lower · Hypertrophy focus · Block 1 of 3</p>
 
-      {PROGRAM_DAYS.map(day => {
+      {programDays.map(day => {
         const color     = DAY_COLORS[day.id];
         const done      = recentIds.includes(day.id);
         const open      = expanded === day.id;
