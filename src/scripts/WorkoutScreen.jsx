@@ -346,7 +346,7 @@ function SwipeableSetRow({ children, onDelete, isLast }) {
   const snap   = 'transform 0.5s cubic-bezier(0.34, 1.5, 0.64, 1)';
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f8f9fa' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f8f9fa', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
       <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_W, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <button onClick={() => { setOffset(0); onDelete(); }}
           style={{ width: '100%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

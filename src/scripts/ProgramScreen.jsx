@@ -51,7 +51,7 @@ function SwipeableExRow({ children, onDelete, editing, isLast }) {
   if (!editing) return <>{children}</>;
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f9fafb' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f9fafb', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
       <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_W, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <button onClick={() => { setOffset(0); onDelete(); }}
           style={{ width: '100%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

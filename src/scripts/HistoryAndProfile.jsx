@@ -46,7 +46,7 @@ function SwipeableSessionRow({ children, onDelete, isLast }) {
   const snap   = 'transform 0.5s cubic-bezier(0.34, 1.5, 0.64, 1)';
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, marginBottom: 10 }}>
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, marginBottom: 10, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
       {/* Delete button behind */}
       <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_W, background: '#ef4444', borderRadius: '0 14px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <button onClick={() => { setOffset(0); onDelete(); }}
