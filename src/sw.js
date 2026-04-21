@@ -1,7 +1,7 @@
 // Service Worker — Workout App
 // Cache-first for own assets, stale-while-revalidate for CDN/fonts.
 
-const CACHE = 'workout-v13';
+const CACHE = 'workout-v14';
 
 const SHELL = [
   './',

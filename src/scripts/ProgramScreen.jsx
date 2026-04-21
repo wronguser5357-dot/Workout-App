@@ -75,8 +75,18 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
   const [renamingDay, setRenamingDay] = useState(null); // day.id whose name is being edited
   const [renameVal, setRenameVal]   = useState('');
   const [swappingEx, setSwappingEx] = useState(null);   // { dayId, slotIdx, ex }
+  const cardRefs = useRef({});
   const oneWeekAgo = Date.now() - 7 * 86400000;
   const recentIds  = history.filter(h => h.date > oneWeekAgo).map(h => h.dayId);
+
+  // Scroll the opened card into view after it expands
+  useEffect(() => {
+    if (!expanded) return;
+    const timer = setTimeout(() => {
+      cardRefs.current[expanded]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80); // small delay so the DOM has expanded first
+    return () => clearTimeout(timer);
+  }, [expanded]);
 
   function handleProgramSwap(newEx) {
     if (!swappingEx) return;
@@ -97,7 +107,7 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
         const totalSets = day.exercises.reduce((a,b) => a+b.sets, 0);
 
         return (
-          <div key={day.id} style={{ background: '#fff', borderRadius: 18, marginBottom: 12, overflow: 'hidden', border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+          <div key={day.id} ref={el => cardRefs.current[day.id] = el} style={{ background: '#fff', borderRadius: 18, marginBottom: 12, overflow: 'hidden', border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
             {/* Day header row */}
             <button onClick={() => {
                 const opening = !open;
