@@ -10,8 +10,8 @@
 
 html, body {
   height: 100%;
-  /* Fill the notch/home-indicator areas with the app background */
-  background: #478dff;
+  /* Match app background so safe-area notch/home-bar areas blend in */
+  background: #f0f2f5;
   font-family: 'DM Sans', sans-serif;
 }
 
@@ -19,13 +19,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* On real phones the body fills edge-to-edge; center the app shell */
-  background: #e8eaed;
 }
 
 #root {
-  width: 390px;
-  /* 100dvh already excludes browser chrome; safe-area insets handle notch/home bar */
+  /* Mobile-first: fill the full viewport */
+  width: 100%;
   height: 100dvh;
   max-height: 100dvh;
   background: #f0f2f5;
@@ -39,20 +37,19 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* On a desktop / tablet that has enough room, show the phone shell */
+/* On desktop / tablet: show the centered phone shell */
 @media (min-height: 860px) and (min-width: 500px) {
+  html, body {
+    background: #e8eaed;
+  }
   #root {
+    width: 390px;
     height: 844px;
-    /* No safe-area padding needed — this is the simulated phone frame */
     padding-top: 0;
     padding-bottom: 0;
     border-radius: 44px;
     box-shadow: 0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.08);
   }
-}
-
-@media (max-width: 400px) {
-  #root { width: 100%; }
 }
 
 .screen-scroll {

@@ -342,8 +342,8 @@ function SwipeableSetRow({ children, onDelete, isLast }) {
     setOffset(prev => prev > THRESHOLD ? DELETE_W : 0);
   }
 
-  const spring = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-  const snap   = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+  const spring = 'transform 0.65s cubic-bezier(0.34, 2.4, 0.64, 1)';
+  const snap   = 'transform 0.5s cubic-bezier(0.34, 1.5, 0.64, 1)';
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f8f9fa' }}>
