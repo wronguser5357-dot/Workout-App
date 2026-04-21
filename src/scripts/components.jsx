@@ -169,4 +169,32 @@ function SwapSheet({ exercise, onSwap, onClose, color }) {
   );
 }
 
-Object.assign(window, { NavBar, WeekDots, MiniChart, RPEPills, NumStepper, SwapSheet });
+// ---- WORKOUT BANNER (minimised workout persistent bar) ----
+function WorkoutBanner({ day, startTime, onResume }) {
+  const [elapsed, setElapsed] = useState(Math.floor((Date.now() - startTime) / 1000));
+  const color = DAY_COLORS[day.id];
+
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [startTime]);
+
+  const mm = Math.floor(elapsed / 60).toString().padStart(2, '0');
+  const ss = (elapsed % 60).toString().padStart(2, '0');
+
+  return (
+    <button onClick={onResume}
+      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', background: color, border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, textAlign: 'left' }}>
+      {/* Pulsing dot */}
+      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite' }} />
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{day.name}</div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Workout in progress — tap to return</div>
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' }}>{mm}:{ss}</div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  );
+}
+
+Object.assign(window, { NavBar, WeekDots, MiniChart, RPEPills, NumStepper, SwapSheet, WorkoutBanner });

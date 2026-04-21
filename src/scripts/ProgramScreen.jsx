@@ -4,7 +4,8 @@
 
 // ---- SWIPEABLE EXERCISE ROW (edit mode only) ----
 function SwipeableExRow({ children, onDelete, editing, isLast }) {
-  const [offset, setOffset]  = useState(0);
+  const [offset, setOffset]   = useState(0);
+  const [settled, setSettled] = useState(true);
   const startX    = useRef(null);
   const startY    = useRef(null);
   const startOff  = useRef(0);
@@ -13,8 +14,7 @@ function SwipeableExRow({ children, onDelete, editing, isLast }) {
   const DELETE_W  = 72;
   const THRESHOLD = 36;
 
-  // Reset when edit mode turns off
-  useEffect(() => { if (!editing) setOffset(0); }, [editing]);
+  useEffect(() => { if (!editing) { setSettled(true); setOffset(0); } }, [editing]);
 
   function onTouchStart(e) {
     if (!editing) return;
@@ -23,6 +23,7 @@ function SwipeableExRow({ children, onDelete, editing, isLast }) {
     startOff.current  = offset;
     dragging.current  = true;
     direction.current = null;
+    setSettled(false);
   }
 
   function onTouchMove(e) {
@@ -40,14 +41,17 @@ function SwipeableExRow({ children, onDelete, editing, isLast }) {
 
   function onTouchEnd() {
     dragging.current = false;
+    setSettled(true);
     setOffset(prev => prev > THRESHOLD ? DELETE_W : 0);
   }
+
+  const spring = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+  const snap   = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 
   if (!editing) return <>{children}</>;
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f9fafb' }}>
-      {/* Red delete zone */}
       <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_W, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <button onClick={() => { setOffset(0); onDelete(); }}
           style={{ width: '100%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -57,12 +61,11 @@ function SwipeableExRow({ children, onDelete, editing, isLast }) {
           </svg>
         </button>
       </div>
-      {/* Sliding content */}
       <div
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        style={{ transform: `translateX(-${offset}px)`, transition: dragging.current ? 'none' : 'transform 0.22s ease', background: '#fff' }}>
+        style={{ transform: `translateX(-${offset}px)`, transition: settled ? (offset === 0 ? snap : spring) : 'none', background: '#fff' }}>
         {children}
       </div>
     </div>

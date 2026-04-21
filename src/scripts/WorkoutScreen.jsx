@@ -2,7 +2,7 @@
 // ACTIVE WORKOUT SCREEN
 // ============================================================
 
-function WorkoutScreen({ day, weights, onComplete, onClose, onSaveSwap }) {
+function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSwap }) {
   const color = DAY_COLORS[day.id];
 
   const initSets = () => day.exercises.map(ex => {
@@ -191,7 +191,10 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onSaveSwap }) {
 
       {/* Top bar */}
       <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10, background: '#fff', borderBottom: '1px solid #f0f0f0', flexShrink: 0, zIndex: 10 }}>
-        <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
+        <button onClick={onMinimize || onClose} title="Minimise workout"
+          style={{ width: 32, height: 32, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{day.name}</div>
           <div style={{ height: 3, background: '#f3f4f6', borderRadius: 2, overflow: 'hidden', marginTop: 4 }}>
@@ -273,62 +276,64 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onSaveSwap }) {
 
 // ---- SWIPEABLE SET ROW ----
 function SwipeableSetRow({ children, onDelete, isLast }) {
-  const [offset, setOffset]     = useState(0);
-  const startX     = useRef(null);
-  const startY     = useRef(null);
-  const startOff   = useRef(0);
-  const dragging   = useRef(false);
-  const direction  = useRef(null); // 'h' | 'v' | null
-  const DELETE_W   = 72;
-  const THRESHOLD  = 36;
+  const [offset, setOffset]   = useState(0);
+  const [settled, setSettled] = useState(true); // false while finger is down
+  const startX    = useRef(null);
+  const startY    = useRef(null);
+  const startOff  = useRef(0);
+  const dragging  = useRef(false);
+  const direction = useRef(null);
+  const DELETE_W  = 72;
+  const THRESHOLD = 36;
 
   function onTouchStart(e) {
-    startX.current   = e.touches[0].clientX;
-    startY.current   = e.touches[0].clientY;
-    startOff.current = offset;
-    dragging.current = true;
+    startX.current    = e.touches[0].clientX;
+    startY.current    = e.touches[0].clientY;
+    startOff.current  = offset;
+    dragging.current  = true;
     direction.current = null;
+    setSettled(false);
   }
 
   function onTouchMove(e) {
     if (!dragging.current) return;
     const dx = e.touches[0].clientX - startX.current;
     const dy = Math.abs(e.touches[0].clientY - startY.current);
-
     if (direction.current === null) {
       if (Math.abs(dx) > 4 || dy > 4)
         direction.current = Math.abs(dx) > dy ? 'h' : 'v';
       return;
     }
     if (direction.current === 'v') return;
-
     e.preventDefault();
     setOffset(Math.max(0, Math.min(DELETE_W, startOff.current - dx)));
   }
 
   function onTouchEnd() {
     dragging.current = false;
+    setSettled(true);
     setOffset(prev => prev > THRESHOLD ? DELETE_W : 0);
   }
 
+  const spring = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+  const snap   = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f8f9fa' }}>
-      {/* Red delete zone */}
       <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_W, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <button
-          onClick={() => { setOffset(0); onDelete(); }}
+        <button onClick={() => { setOffset(0); onDelete(); }}
           style={{ width: '100%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
           </svg>
         </button>
       </div>
-      {/* Sliding content */}
       <div
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        style={{ transform: `translateX(-${offset}px)`, transition: dragging.current ? 'none' : 'transform 0.22s ease', background: 'inherit' }}>
+        style={{ transform: `translateX(-${offset}px)`, transition: settled ? (offset === 0 ? snap : spring) : 'none', background: 'inherit' }}>
         {children}
       </div>
     </div>

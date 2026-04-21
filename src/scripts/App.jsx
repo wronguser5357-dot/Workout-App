@@ -39,6 +39,8 @@ function App() {
     catch { return {}; }
   });
   const [tweaksVisible, setTweaksVisible] = useState(false);
+  const [workoutMinimized, setWorkoutMinimized] = useState(false);
+  const workoutStartTime = useRef(null);
 
   useEffect(() => { localStorage.setItem('wapp_tab', tab); }, [tab]);
   useEffect(() => { localStorage.setItem('wapp_history', JSON.stringify(history)); }, [history]);
@@ -71,7 +73,11 @@ function App() {
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits: next }, '*');
   }
 
-  function handleStartWorkout(day) { setActiveWorkout(day); }
+  function handleStartWorkout(day) {
+    workoutStartTime.current = Date.now();
+    setWorkoutMinimized(false);
+    setActiveWorkout(day);
+  }
 
   function handleWorkoutComplete(result) {
     setHistory(prev => [...prev, {
@@ -87,6 +93,7 @@ function App() {
       });
     }
     setActiveWorkout(null);
+    setWorkoutMinimized(false);
   }
 
   function handleUpdateWeight(id, val) {
@@ -153,16 +160,24 @@ function App() {
 
   return (
     <>
-      {activeWorkout ? (
+      {activeWorkout && !workoutMinimized ? (
         <WorkoutScreen
           day={activeWorkout}
           weights={weights}
           onComplete={handleWorkoutComplete}
           onClose={() => setActiveWorkout(null)}
+          onMinimize={() => setWorkoutMinimized(true)}
           onSaveSwap={handleSaveSwap}
         />
       ) : (
         <>
+          {activeWorkout && workoutMinimized && (
+            <WorkoutBanner
+              day={activeWorkout}
+              startTime={workoutStartTime.current}
+              onResume={() => setWorkoutMinimized(false)}
+            />
+          )}
           <div className="screen-scroll">
             {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} programDays={effectiveDays} />}
             {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} onEditSwap={handleSaveSwap} onRenameDay={handleRenameDay} onDeleteExercise={handleDeleteExercise} />}
