@@ -100,6 +100,10 @@ function App() {
     setWeights(prev => ({ ...prev, [id]: { w: val } }));
   }
 
+  function handleDeleteSession(id) {
+    setHistory(prev => prev.filter(h => h.id !== id));
+  }
+
   // Permanently saves a mid-workout swap to the program plan.
   // slotIdx = position of the exercise in the day's exercise list.
   function handleSaveSwap(dayId, slotIdx, newEx) {
@@ -181,7 +185,7 @@ function App() {
           <div className="screen-scroll">
             {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} programDays={effectiveDays} />}
             {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} onEditSwap={handleSaveSwap} onRenameDay={handleRenameDay} onDeleteExercise={handleDeleteExercise} />}
-            {tab === 'history' && <HistoryScreen history={history} />}
+            {tab === 'history' && <HistoryScreen history={history} onDeleteSession={handleDeleteSession} />}
             {tab === 'profile' && <ProfileScreen weights={weights} onUpdateWeight={handleUpdateWeight} onResetOnboarding={() => { localStorage.removeItem('wapp_profile'); setOnboarded(false); }} />}
           </div>
           <NavBar tab={tab} setTab={setTab} workoutActive={false} />
