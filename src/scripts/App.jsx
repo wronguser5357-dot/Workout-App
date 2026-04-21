@@ -34,6 +34,10 @@ function App() {
     try { return JSON.parse(localStorage.getItem('wapp_day_names') || '{}'); }
     catch { return {}; }
   });
+  const [savedDeletions, setSavedDeletions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wapp_deletions') || '{}'); }
+    catch { return {}; }
+  });
   const [tweaksVisible, setTweaksVisible] = useState(false);
 
   useEffect(() => { localStorage.setItem('wapp_tab', tab); }, [tab]);
@@ -41,6 +45,7 @@ function App() {
   useEffect(() => { localStorage.setItem('wapp_weights', JSON.stringify(weights)); }, [weights]);
   useEffect(() => { localStorage.setItem('wapp_program_swaps', JSON.stringify(savedSwaps)); }, [savedSwaps]);
   useEffect(() => { localStorage.setItem('wapp_day_names', JSON.stringify(savedDayNames)); }, [savedDayNames]);
+  useEffect(() => { localStorage.setItem('wapp_deletions', JSON.stringify(savedDeletions)); }, [savedDeletions]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -98,12 +103,13 @@ function App() {
   }
 
   function handleStartFresh() {
-    const keys = ['wapp_profile','wapp_history','wapp_weights','wapp_tab','wapp_tweaks','wapp_program_swaps','wapp_day_names'];
+    const keys = ['wapp_profile','wapp_history','wapp_weights','wapp_tab','wapp_tweaks','wapp_program_swaps','wapp_day_names','wapp_deletions'];
     keys.forEach(k => localStorage.removeItem(k));
     setHistory([]);
     setWeights({ ...DEFAULT_WEIGHTS });
     setSavedSwaps({});
     setSavedDayNames({});
+    setSavedDeletions({});
     setTab('home');
     // onboarded is already false, so no change needed — just resets backing data
   }
@@ -129,10 +135,20 @@ function App() {
     setSavedDayNames(prev => ({ ...prev, [dayId]: newName }));
   }
 
-  // PROGRAM_DAYS with saved exercise swaps + custom day names applied
+  // Marks an exercise slot as deleted from the program plan.
+  // originalSlot = index in PROGRAM_DAYS (stable, unaffected by prior deletions).
+  function handleDeleteExercise(dayId, originalSlot) {
+    setSavedDeletions(prev => ({ ...prev, [`${dayId}:${originalSlot}`]: true }));
+  }
+
+  // PROGRAM_DAYS with saved exercise swaps + custom day names + deletions applied.
+  // _originalSlot is attached before filtering so ProgramScreen can reference it.
   const effectiveDays = applyProgramSwaps(PROGRAM_DAYS, savedSwaps).map(day => ({
     ...day,
     name: savedDayNames[day.id] || day.name,
+    exercises: day.exercises
+      .map((ex, i) => ({ ...ex, _originalSlot: i }))
+      .filter(ex => !savedDeletions[`${day.id}:${ex._originalSlot}`]),
   }));
 
   return (
@@ -149,7 +165,7 @@ function App() {
         <>
           <div className="screen-scroll">
             {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} programDays={effectiveDays} />}
-            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} onEditSwap={handleSaveSwap} onRenameDay={handleRenameDay} />}
+            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} onEditSwap={handleSaveSwap} onRenameDay={handleRenameDay} onDeleteExercise={handleDeleteExercise} />}
             {tab === 'history' && <HistoryScreen history={history} />}
             {tab === 'profile' && <ProfileScreen weights={weights} onUpdateWeight={handleUpdateWeight} onResetOnboarding={() => { localStorage.removeItem('wapp_profile'); setOnboarded(false); }} />}
           </div>

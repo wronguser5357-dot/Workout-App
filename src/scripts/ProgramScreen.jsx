@@ -2,7 +2,74 @@
 // PROGRAM SCREEN
 // ============================================================
 
-function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, onEditSwap, onRenameDay }) {
+// ---- SWIPEABLE EXERCISE ROW (edit mode only) ----
+function SwipeableExRow({ children, onDelete, editing, isLast }) {
+  const [offset, setOffset]  = useState(0);
+  const startX    = useRef(null);
+  const startY    = useRef(null);
+  const startOff  = useRef(0);
+  const dragging  = useRef(false);
+  const direction = useRef(null);
+  const DELETE_W  = 72;
+  const THRESHOLD = 36;
+
+  // Reset when edit mode turns off
+  useEffect(() => { if (!editing) setOffset(0); }, [editing]);
+
+  function onTouchStart(e) {
+    if (!editing) return;
+    startX.current    = e.touches[0].clientX;
+    startY.current    = e.touches[0].clientY;
+    startOff.current  = offset;
+    dragging.current  = true;
+    direction.current = null;
+  }
+
+  function onTouchMove(e) {
+    if (!dragging.current) return;
+    const dx = e.touches[0].clientX - startX.current;
+    const dy = Math.abs(e.touches[0].clientY - startY.current);
+    if (direction.current === null) {
+      if (Math.abs(dx) > 4 || dy > 4) direction.current = Math.abs(dx) > dy ? 'h' : 'v';
+      return;
+    }
+    if (direction.current === 'v') return;
+    e.preventDefault();
+    setOffset(Math.max(0, Math.min(DELETE_W, startOff.current - dx)));
+  }
+
+  function onTouchEnd() {
+    dragging.current = false;
+    setOffset(prev => prev > THRESHOLD ? DELETE_W : 0);
+  }
+
+  if (!editing) return <>{children}</>;
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderBottom: isLast ? 'none' : '1px solid #f9fafb' }}>
+      {/* Red delete zone */}
+      <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_W, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={() => { setOffset(0); onDelete(); }}
+          style={{ width: '100%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+          </svg>
+        </button>
+      </div>
+      {/* Sliding content */}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ transform: `translateX(-${offset}px)`, transition: dragging.current ? 'none' : 'transform 0.22s ease', background: '#fff' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, onEditSwap, onRenameDay, onDeleteExercise }) {
   const [expanded, setExpanded]     = useState(null);
   const [editingDay, setEditingDay] = useState(null);   // day.id currently in edit mode
   const [renamingDay, setRenamingDay] = useState(null); // day.id whose name is being edited
@@ -119,29 +186,35 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
                   </div>
 
                   {day.exercises.map((ex, i) => (
-                    <div key={ex.id + i} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 11, marginBottom: i < day.exercises.length - 1 ? 11 : 0, borderBottom: i < day.exercises.length - 1 ? '1px solid #f9fafb' : 'none' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: ex.note ? 2 : 0 }}>{ex.name}</div>
-                        {ex.note && <div style={{ fontSize: 11, color, fontWeight: 600 }}>{ex.note}</div>}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 12 }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{ex.sets}×{ex.repRange}</span>
-                          <span style={{ display: 'block', fontSize: 11, color: '#9ca3af' }}>RPE {ex.rpe}</span>
+                    <SwipeableExRow
+                      key={ex._originalSlot ?? i}
+                      editing={editing}
+                      isLast={i === day.exercises.length - 1}
+                      onDelete={() => onDeleteExercise && onDeleteExercise(day.id, ex._originalSlot ?? i)}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '11px 0', marginBottom: 0 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: ex.note ? 2 : 0 }}>{ex.name}</div>
+                          {ex.note && <div style={{ fontSize: 11, color, fontWeight: 600 }}>{ex.note}</div>}
                         </div>
-                        {editing && (
-                          <button
-                            onClick={() => setSwappingEx({ dayId: day.id, slotIdx: i, ex })}
-                            title="Swap exercise"
-                            style={{ width: 32, height: 32, borderRadius: 10, background: color + '15', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/>
-                              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>
-                            </svg>
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 12 }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{ex.sets}×{ex.repRange}</span>
+                            <span style={{ display: 'block', fontSize: 11, color: '#9ca3af' }}>RPE {ex.rpe}</span>
+                          </div>
+                          {editing && (
+                            <button
+                              onClick={() => setSwappingEx({ dayId: day.id, slotIdx: ex._originalSlot ?? i, ex })}
+                              title="Swap exercise"
+                              style={{ width: 32, height: 32, borderRadius: 10, background: color + '15', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/>
+                                <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </SwipeableExRow>
                   ))}
                 </div>
 
