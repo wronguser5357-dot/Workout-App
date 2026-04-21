@@ -33,8 +33,7 @@ body {
   position: relative;
   /* Push content below the iOS status bar / Dynamic Island */
   padding-top: env(safe-area-inset-top);
-  /* Lift content above the iOS home indicator */
-  padding-bottom: env(safe-area-inset-bottom);
+  /* Bottom safe area is handled by the NavBar so its background fills the home-indicator region */
 }
 
 /* On desktop / tablet: show the centered phone shell */

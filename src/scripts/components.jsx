@@ -12,7 +12,7 @@ function NavBar({ tab, setTab, workoutActive }) {
     { id: 'profile', label: 'Profile', icon: (a) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={a?2.5:1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> },
   ];
   return (
-    <nav style={{ height: 72, borderTop: '1px solid #e8eaed', display: 'flex', background: '#ffffff', flexShrink: 0, position: 'relative', zIndex: 10 }}>
+    <nav style={{ height: 'calc(72px + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)', borderTop: '1px solid #e8eaed', display: 'flex', background: '#ffffff', flexShrink: 0, position: 'relative', zIndex: 10 }}>
       {tabs.map(t => {
         const active = tab === t.id;
         return (
@@ -184,7 +184,7 @@ function WorkoutBanner({ day, startTime, onResume }) {
 
   return (
     <button onClick={onResume}
-      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', background: color, border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, textAlign: 'left' }}>
+      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', background: color, border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, textAlign: 'left', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
       {/* Pulsing dot */}
       <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite' }} />
       <div style={{ flex: 1 }}>
