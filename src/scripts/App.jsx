@@ -172,6 +172,7 @@ function App() {
           onClose={() => setActiveWorkout(null)}
           onMinimize={() => setWorkoutMinimized(true)}
           onSaveSwap={handleSaveSwap}
+          workoutStartTime={workoutStartTime.current}
         />
       ) : (
         <>

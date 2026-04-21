@@ -2,7 +2,7 @@
 // ACTIVE WORKOUT SCREEN
 // ============================================================
 
-function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSwap }) {
+function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSwap, workoutStartTime }) {
   const color = DAY_COLORS[day.id];
 
   const initSets = () => day.exercises.map(ex => {
@@ -21,13 +21,15 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
   const [restTimer, setRestTimer]               = useState(null);
   const [phase, setPhase]                       = useState('working');
   const [editingCell, setEditingCell]           = useState(null);
-  const startTime = useRef(Date.now());
-  const [elapsed, setElapsed] = useState(0);
+  const [cancelConfirm, setCancelConfirm]       = useState(false);
+  // Use the start time passed from App so minimize/resume doesn't break it
+  const startRef = useRef(workoutStartTime || Date.now());
+  const [elapsed, setElapsed] = useState(Math.floor((Date.now() - startRef.current) / 1000));
 
   // Tick the elapsed timer every second while working
   useEffect(() => {
     if (phase !== 'working') return;
-    const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTime.current) / 1000)), 1000);
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - startRef.current) / 1000)), 1000);
     return () => clearInterval(t);
   }, [phase]);
 
@@ -118,13 +120,13 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
     onComplete({
       dayId: day.id, name: day.name, date: Date.now(),
       sets: loggedCount, topLifts: [], weightUpdates: updates,
-      duration: Math.round((Date.now() - startTime.current) / 60000)
+      duration: Math.round((Date.now() - startRef.current) / 60000)
     });
   }
 
   // ---- COMPLETE SCREEN ----
   if (phase === 'complete') {
-    const duration = Math.round((Date.now() - startTime.current) / 60000);
+    const duration = Math.round((Date.now() - startRef.current) / 60000);
     const suggestions = sessionExercises.map((ex, ei) => {
       const logged = sets[ei].filter(s => s.logged);
       if (!logged.length) return null;
@@ -259,6 +261,31 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
             />
           );
         })}
+
+        {/* Cancel workout */}
+        <div style={{ padding: '4px 16px 8px' }}>
+          {cancelConfirm ? (
+            <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 14, padding: '14px 16px' }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Cancel this workout?</p>
+              <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>Your progress won't be saved.</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={onClose}
+                  style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#ef4444', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Yes, cancel workout
+                </button>
+                <button onClick={() => setCancelConfirm(false)}
+                  style={{ padding: '10px 16px', borderRadius: 10, background: '#fff', border: '1.5px solid #e8eaed', color: '#6b7280', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Keep going
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setCancelConfirm(true)}
+              style={{ width: '100%', padding: '12px', borderRadius: 12, background: 'transparent', border: '1.5px solid #fca5a5', color: '#ef4444', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Cancel workout
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Swap sheet */}
