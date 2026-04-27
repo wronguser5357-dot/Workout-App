@@ -106,20 +106,32 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
     setSwappingExIdx(null);
   }
 
+  // Shared progression calculation — used by both complete screen and finishWorkout
+  function calcProgression(ex, ei) {
+    const logged = sets[ei].filter(s => s.logged);
+    if (!logged.length) return null;
+    const topRep    = parseInt(String(ex.repRange).split('–')[1] || String(ex.repRange).split('-')[1] || ex.repRange);
+    const topWeight = Math.max(...logged.map(s => s.weight));
+    // "Hit top" = majority of logged sets reached the top rep at or below target RPE
+    const setsHitTop = logged.filter(s => s.reps >= topRep && s.rpe <= ex.rpe).length;
+    const hitTop     = setsHitTop >= Math.ceil(logged.length / 2);
+    const isUpper    = ['B','C'].includes(day.id);
+    const increase   = hitTop ? (isUpper ? 2.5 : 5) : 0;
+    return { topWeight, hitTop, increase, nextWeight: topWeight + increase };
+  }
+
   function finishWorkout() {
-    const updates = {};
+    const updates  = {};
+    const topLifts = [];
     sessionExercises.forEach((ex, ei) => {
-      const logged = sets[ei].filter(s => s.logged);
-      if (logged.length > 0) {
-        const topRep = parseInt(String(ex.repRange).split('–')[1] || ex.repRange);
-        const hitTop = logged.every(s => s.reps >= topRep && s.rpe <= ex.rpe);
-        const isUpper = ['B','C'].includes(day.id);
-        updates[ex.id] = { w: logged[0].weight + (hitTop ? (isUpper ? 2.5 : 5) : 0) };
-      }
+      const prog = calcProgression(ex, ei);
+      if (!prog) return;
+      updates[ex.id] = { w: prog.nextWeight };
+      topLifts.push({ name: ex.name, w: prog.topWeight });
     });
     onComplete({
       dayId: day.id, name: day.name, date: Date.now(),
-      sets: loggedCount, topLifts: [], weightUpdates: updates,
+      sets: loggedCount, topLifts, weightUpdates: updates,
       duration: Math.round((Date.now() - startRef.current) / 60000)
     });
   }
@@ -128,13 +140,9 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
   if (phase === 'complete') {
     const duration = Math.round((Date.now() - startRef.current) / 60000);
     const suggestions = sessionExercises.map((ex, ei) => {
-      const logged = sets[ei].filter(s => s.logged);
-      if (!logged.length) return null;
-      const topRep  = parseInt(String(ex.repRange).split('–')[1] || ex.repRange);
-      const hitTop  = logged.every(s => s.reps >= topRep && s.rpe <= ex.rpe);
-      const isUpper = ['B','C'].includes(day.id);
-      if (hitTop) return { name: ex.name, from: logged[0].weight, to: logged[0].weight + (isUpper ? 2.5 : 5) };
-      return null;
+      const prog = calcProgression(ex, ei);
+      if (!prog || prog.increase === 0) return null;
+      return { name: ex.name, from: prog.topWeight, to: prog.nextWeight };
     }).filter(Boolean);
 
     return (

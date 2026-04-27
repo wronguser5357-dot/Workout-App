@@ -28,8 +28,8 @@ function NavBar({ tab, setTab, workoutActive }) {
 
 function WeekDots({ history, weekDone = [] }) {
   const dayIds = ['A','B','C','D'];
-  // Use weekDone (training-week tracking) if available, fall back to 7-day calendar window
-  const recentIds = weekDone.length > 0 ? weekDone : history.filter(h => h.date > Date.now() - 7 * 86400000).map(h => h.dayId);
+  // weekDone is authoritative — never fall back to calendar history
+  const recentIds = weekDone;
   return (
     <div style={{ display: 'flex', gap: 8 }}>
       {dayIds.map(id => {
