@@ -38,6 +38,10 @@ function App() {
     try { return JSON.parse(localStorage.getItem('wapp_deletions') || '{}'); }
     catch { return {}; }
   });
+  const [weekProgress, setWeekProgress] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wapp_week_progress')) || { week: 1, done: [] }; }
+    catch { return { week: 1, done: [] }; }
+  });
   const [tweaksVisible, setTweaksVisible] = useState(false);
   const [workoutMinimized, setWorkoutMinimized] = useState(false);
   const workoutStartTime = useRef(null);
@@ -48,6 +52,7 @@ function App() {
   useEffect(() => { localStorage.setItem('wapp_program_swaps', JSON.stringify(savedSwaps)); }, [savedSwaps]);
   useEffect(() => { localStorage.setItem('wapp_day_names', JSON.stringify(savedDayNames)); }, [savedDayNames]);
   useEffect(() => { localStorage.setItem('wapp_deletions', JSON.stringify(savedDeletions)); }, [savedDeletions]);
+  useEffect(() => { localStorage.setItem('wapp_week_progress', JSON.stringify(weekProgress)); }, [weekProgress]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -92,8 +97,22 @@ function App() {
         return next;
       });
     }
+    // Track week progress — auto-advance when all 4 days are done
+    setWeekProgress(prev => {
+      const newDone = [...new Set([...prev.done, result.dayId])];
+      const allDone = ['A','B','C','D'].every(id => newDone.includes(id));
+      return allDone ? { week: prev.week + 1, done: [] } : { ...prev, done: newDone };
+    });
     setActiveWorkout(null);
     setWorkoutMinimized(false);
+  }
+
+  function handleNextWeek() {
+    setWeekProgress(prev => ({ week: prev.week + 1, done: [] }));
+  }
+
+  function handlePrevWeek() {
+    setWeekProgress(prev => ({ week: Math.max(1, prev.week - 1), done: [] }));
   }
 
   function handleUpdateWeight(id, val) {
@@ -114,13 +133,14 @@ function App() {
   }
 
   function handleStartFresh() {
-    const keys = ['wapp_profile','wapp_history','wapp_weights','wapp_tab','wapp_tweaks','wapp_program_swaps','wapp_day_names','wapp_deletions'];
+    const keys = ['wapp_profile','wapp_history','wapp_weights','wapp_tab','wapp_tweaks','wapp_program_swaps','wapp_day_names','wapp_deletions','wapp_week_progress'];
     keys.forEach(k => localStorage.removeItem(k));
     setHistory([]);
     setWeights({ ...DEFAULT_WEIGHTS });
     setSavedSwaps({});
     setSavedDayNames({});
     setSavedDeletions({});
+    setWeekProgress({ week: 1, done: [] });
     setTab('home');
     // onboarded is already false, so no change needed — just resets backing data
   }
@@ -184,8 +204,8 @@ function App() {
             />
           )}
           <div className="screen-scroll">
-            {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} programDays={effectiveDays} />}
-            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} onEditSwap={handleSaveSwap} onRenameDay={handleRenameDay} onDeleteExercise={handleDeleteExercise} />}
+            {tab === 'home'    && <HomeScreen    history={history} onStartWorkout={handleStartWorkout} weights={weights} programDays={effectiveDays} currentWeek={weekProgress.week} weekDone={weekProgress.done} />}
+            {tab === 'program' && <ProgramScreen onStartWorkout={handleStartWorkout} history={history} programDays={effectiveDays} onEditSwap={handleSaveSwap} onRenameDay={handleRenameDay} onDeleteExercise={handleDeleteExercise} currentWeek={weekProgress.week} weekDone={weekProgress.done} onNextWeek={handleNextWeek} onPrevWeek={handlePrevWeek} />}
             {tab === 'history' && <HistoryScreen history={history} onDeleteSession={handleDeleteSession} />}
             {tab === 'profile' && <ProfileScreen weights={weights} onUpdateWeight={handleUpdateWeight} onResetOnboarding={() => { localStorage.removeItem('wapp_profile'); setOnboarded(false); }} />}
           </div>

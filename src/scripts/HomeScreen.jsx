@@ -2,7 +2,7 @@
 // HOME SCREEN
 // ============================================================
 
-function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DAYS }) {
+function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DAYS, currentWeek = 1, weekDone = [] }) {
   const [expandedLift, setExpandedLift] = useState(null);
 
   const nextDay = (() => {
@@ -44,9 +44,9 @@ function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DA
       <div style={{ background: '#fff', borderRadius: 18, padding: '18px 20px', marginBottom: 14, border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase' }}>This week</span>
-          <span style={{ fontSize: 12, color: '#9ca3af' }}>Week 3 · Block 1</span>
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>Week {currentWeek} · Block {Math.ceil(currentWeek / 6)}</span>
         </div>
-        <WeekDots history={history} />
+        <WeekDots history={history} weekDone={weekDone} />
       </div>
 
       {/* Next session CTA */}

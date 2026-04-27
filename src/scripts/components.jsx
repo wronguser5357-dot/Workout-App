@@ -26,10 +26,10 @@ function NavBar({ tab, setTab, workoutActive }) {
   );
 }
 
-function WeekDots({ history }) {
+function WeekDots({ history, weekDone = [] }) {
   const dayIds = ['A','B','C','D'];
-  const oneWeekAgo = Date.now() - 7 * 86400000;
-  const recentIds = history.filter(h => h.date > oneWeekAgo).map(h => h.dayId);
+  // Use weekDone (training-week tracking) if available, fall back to 7-day calendar window
+  const recentIds = weekDone.length > 0 ? weekDone : history.filter(h => h.date > Date.now() - 7 * 86400000).map(h => h.dayId);
   return (
     <div style={{ display: 'flex', gap: 8 }}>
       {dayIds.map(id => {

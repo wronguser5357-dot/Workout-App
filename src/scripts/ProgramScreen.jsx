@@ -72,7 +72,7 @@ function SwipeableExRow({ children, onDelete, editing, isLast }) {
   );
 }
 
-function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, onEditSwap, onRenameDay, onDeleteExercise }) {
+function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, onEditSwap, onRenameDay, onDeleteExercise, currentWeek = 1, weekDone = [], onNextWeek, onPrevWeek }) {
   const [expanded, setExpanded]     = useState(null);
   const [editingDay, setEditingDay] = useState(null);   // day.id currently in edit mode
   const [renamingDay, setRenamingDay] = useState(null); // day.id whose name is being edited
@@ -99,8 +99,32 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
 
   return (
     <div style={{ padding: '28px 20px 0', position: 'relative' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4, color: '#111827' }}>4-Day Split</h1>
-      <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 24 }}>Upper / Lower · Hypertrophy focus · Block 1 of 3</p>
+
+      {/* Header + week navigation */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4, color: '#111827' }}>4-Day Split</h1>
+          <p style={{ fontSize: 13, color: '#9ca3af' }}>Upper / Lower · Hypertrophy focus · Block {Math.ceil(currentWeek / 6)} of 3</p>
+        </div>
+
+        {/* Week stepper */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #f0f0f0', borderRadius: 12, padding: '6px 10px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', flexShrink: 0, marginTop: 2 }}>
+          <button onClick={onPrevWeek} disabled={currentWeek <= 1}
+            style={{ width: 26, height: 26, borderRadius: 8, background: currentWeek <= 1 ? '#f9fafb' : '#f3f4f6', border: 'none', color: currentWeek <= 1 ? '#d1d5db' : '#374151', fontSize: 16, fontWeight: 700, cursor: currentWeek <= 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+            ‹
+          </button>
+          <div style={{ textAlign: 'center', minWidth: 54 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', lineHeight: 1 }}>Week {currentWeek}</div>
+            <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600, marginTop: 2 }}>
+              {weekDone.length}/4 done
+            </div>
+          </div>
+          <button onClick={onNextWeek}
+            style={{ width: 26, height: 26, borderRadius: 8, background: '#f3f4f6', border: 'none', color: '#374151', fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+            ›
+          </button>
+        </div>
+      </div>
 
       {programDays.map(day => {
         const color     = DAY_COLORS[day.id];
