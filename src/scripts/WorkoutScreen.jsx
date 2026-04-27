@@ -6,9 +6,9 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
   const color = DAY_COLORS[day.id];
 
   const initSets = () => day.exercises.map(ex => {
-    const w = weights[ex.id]?.w ?? 0;
+    const w = weights[ex.id]?.w ?? DEFAULT_WEIGHTS[ex.id]?.w ?? 0;
     return Array.from({ length: ex.sets }, () => ({
-      weight: w, reps: parseInt(String(ex.repRange).split('–')[0]) || 10,
+      weight: w, reps: parseInt(ex.repRange) || 10,
       rpe: ex.rpe, logged: false
     }));
   });
@@ -90,16 +90,20 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
 
   function handleSwap(newEx) {
     const origEx = sessionExercises[swappingExIdx];
+    // Weight priority: stored weight for new exercise → default weight → original exercise's current weight
+    const origWeight = sets[swappingExIdx]?.[0]?.weight ?? 0;
+    const newWeight  = weights[newEx.id]?.w ?? DEFAULT_WEIGHTS[newEx.id]?.w ?? origWeight;
+    // parseInt handles both '8–12' (en-dash) and '8-12' (hyphen) correctly — stops at first non-digit
+    const startReps  = parseInt(origEx.repRange) || 10;
+
     setSessionExercises(prev => prev.map((ex, i) =>
       i === swappingExIdx ? { ...newEx, sets: ex.sets, repRange: ex.repRange, rpe: ex.rpe } : ex
     ));
-    setSwappedIds(prev => ({ ...prev, [swappingExIdx]: origEx })); // store full origEx for save
+    setSwappedIds(prev => ({ ...prev, [swappingExIdx]: origEx }));
     setSets(prev => {
       const next = prev.map(e => e.map(s => ({ ...s })));
-      const w = weights[newEx.id]?.w ?? DEFAULT_WEIGHTS[newEx.id]?.w ?? 0;
       next[swappingExIdx] = Array.from({ length: origEx.sets }, () => ({
-        weight: w, reps: parseInt(String(origEx.repRange).split('–')[0]) || 10,
-        rpe: origEx.rpe, logged: false
+        weight: newWeight, reps: startReps, rpe: origEx.rpe, logged: false,
       }));
       return next;
     });
