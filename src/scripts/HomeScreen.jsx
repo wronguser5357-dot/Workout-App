@@ -5,11 +5,8 @@
 function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DAYS, currentWeek = 1, weekDone = [] }) {
   const [expandedLift, setExpandedLift] = useState(null);
 
-  const nextDay = (() => {
-    const oneWeekAgo = Date.now() - 7 * 86400000;
-    const recentIds = history.filter(h => h.date > oneWeekAgo).map(h => h.dayId);
-    return programDays.find(d => !recentIds.includes(d.id)) || programDays[0];
-  })();
+  // Use weekDone (current training week) to find what's up next
+  const nextDay = programDays.find(d => !weekDone.includes(d.id)) || programDays[0];
 
   const totalSets     = history.reduce((a, b) => a + b.sets, 0);
   const totalSessions = history.length;

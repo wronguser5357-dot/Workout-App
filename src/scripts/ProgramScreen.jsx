@@ -79,8 +79,6 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
   const [renameVal, setRenameVal]   = useState('');
   const [swappingEx, setSwappingEx] = useState(null);   // { dayId, slotIdx, ex }
   const cardRefs = useRef({});
-  const oneWeekAgo = Date.now() - 7 * 86400000;
-  const recentIds  = history.filter(h => h.date > oneWeekAgo).map(h => h.dayId);
 
   // Scroll the opened card into view after it expands
   useEffect(() => {
@@ -128,7 +126,7 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
 
       {programDays.map(day => {
         const color     = DAY_COLORS[day.id];
-        const done      = recentIds.includes(day.id);
+        const done      = weekDone.includes(day.id);
         const open      = expanded === day.id;
         const editing   = editingDay === day.id;
         const totalSets = day.exercises.reduce((a,b) => a+b.sets, 0);
