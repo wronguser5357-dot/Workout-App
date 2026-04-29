@@ -2,8 +2,17 @@
 // ACTIVE WORKOUT SCREEN
 // ============================================================
 
-function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSwap, workoutStartTime }) {
+function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSwap, workoutStartTime, prevLog = {} }) {
   const color = DAY_COLORS[day.id];
+
+  // Restore from localStorage if there's a saved workout for this day
+  // (handles both minimize/resume unmount cycles AND app crash recovery)
+  const [savedWorkout] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('wapp_active_workout') || 'null');
+      return s?.day?.id === day.id ? s : null;
+    } catch { return null; }
+  });
 
   const initSets = () => day.exercises.map(ex => {
     const w = weights[ex.id]?.w ?? DEFAULT_WEIGHTS[ex.id]?.w ?? 0;
@@ -13,18 +22,29 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
     }));
   });
 
-  const [sessionExercises, setSessionExercises] = useState(day.exercises);
-  const [swappedIds, setSwappedIds]             = useState({}); // { [ei]: origExercise }
-  const [savedToPlans, setSavedToPlans]         = useState({}); // { [ei]: true } after saving
-  const [sets, setSets]                         = useState(initSets);
+  const [sessionExercises, setSessionExercises] = useState(() => savedWorkout?.sessionExercises || day.exercises);
+  const [swappedIds, setSwappedIds]             = useState(() => savedWorkout?.swappedIds || {});
+  const [savedToPlans, setSavedToPlans]         = useState(() => savedWorkout?.savedToPlans || {});
+  const [sets, setSets]                         = useState(() => savedWorkout?.sets || initSets());
   const [swappingExIdx, setSwappingExIdx]       = useState(null);
   const [restTimer, setRestTimer]               = useState(null);
   const [phase, setPhase]                       = useState('working');
   const [editingCell, setEditingCell]           = useState(null);
   const [cancelConfirm, setCancelConfirm]       = useState(false);
-  // Use the start time passed from App so minimize/resume doesn't break it
-  const startRef = useRef(workoutStartTime || Date.now());
+  // startRef: prefer saved time (crash recovery), then prop from App (minimize/resume), then now
+  const startRef = useRef(savedWorkout?.startTime || workoutStartTime || Date.now());
   const [elapsed, setElapsed] = useState(Math.floor((Date.now() - startRef.current) / 1000));
+
+  // Persist workout state continuously so crashes don't lose progress
+  useEffect(() => {
+    if (phase === 'complete') return; // don't overwrite after finishing
+    try {
+      localStorage.setItem('wapp_active_workout', JSON.stringify({
+        day, sets, sessionExercises, swappedIds, savedToPlans,
+        startTime: startRef.current,
+      }));
+    } catch(e) {}
+  }, [sets, sessionExercises, swappedIds, savedToPlans, phase]);
 
   // Tick the elapsed timer every second while working
   useEffect(() => {
@@ -125,17 +145,27 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
   }
 
   function finishWorkout() {
-    const updates  = {};
-    const topLifts = [];
+    localStorage.removeItem('wapp_active_workout');
+    const updates     = {};
+    const topLifts    = [];
+    const exerciseLog = [];
     sessionExercises.forEach((ex, ei) => {
-      const prog = calcProgression(ex, ei);
-      if (!prog) return;
-      updates[ex.id] = { w: prog.nextWeight };
-      topLifts.push({ name: ex.name, w: prog.topWeight });
+      const prog   = calcProgression(ex, ei);
+      const logged = sets[ei].filter(s => s.logged);
+      if (prog) {
+        updates[ex.id] = { w: prog.nextWeight };
+        topLifts.push({ name: ex.name, w: prog.topWeight });
+      }
+      if (logged.length) {
+        exerciseLog.push({
+          id: ex.id, name: ex.name,
+          sets: logged.map(s => ({ weight: s.weight, reps: s.reps, rpe: s.rpe })),
+        });
+      }
     });
     onComplete({
       dayId: day.id, name: day.name, date: Date.now(),
-      sets: loggedCount, topLifts, weightUpdates: updates,
+      sets: loggedCount, topLifts, weightUpdates: updates, exerciseLog,
       duration: Math.round((Date.now() - startRef.current) / 60000)
     });
   }
@@ -266,6 +296,7 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
               onSwap={() => setSwappingExIdx(ei)}
               onDeleteSet={(si) => deleteSet(ei, si)}
               savedToPlan={!!savedToPlans[ei]}
+              prevSets={prevLog[ex.id] || []}
               onSaveToPlan={() => {
                 setSavedToPlans(prev => ({ ...prev, [ei]: true }));
                 onSaveSwap && onSaveSwap(day.id, ei, sessionExercises[ei]);
@@ -281,7 +312,7 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
               <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Cancel this workout?</p>
               <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>Your progress won't be saved.</p>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={onClose}
+                <button onClick={() => { localStorage.removeItem('wapp_active_workout'); onClose(); }}
                   style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#ef4444', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                   Yes, cancel workout
                 </button>
@@ -380,7 +411,7 @@ function SwipeableSetRow({ children, onDelete, isLast }) {
 }
 
 // ---- EXERCISE CARD ----
-function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, setEditingCell, onUpdateSet, onLogSet, onAddSet, onSwap, onDeleteSet, savedToPlan, onSaveToPlan }) {
+function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, setEditingCell, onUpdateSet, onLogSet, onAddSet, onSwap, onDeleteSet, savedToPlan, onSaveToPlan, prevSets = [] }) {
   return (
     <div style={{ background: '#fff', borderRadius: 18, margin: '0 16px 14px', border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden', opacity: allLogged ? 0.7 : 1, transition: 'opacity 0.2s' }}>
       {/* Header */}
@@ -415,8 +446,11 @@ function ExerciseCard({ ex, ei, exSets, allLogged, swapped, color, editingCell, 
         const isLogged   = s.logged;
         const isEditingW = editingCell?.ei === ei && editingCell?.si === si && editingCell?.field === 'weight';
         const isEditingR = editingCell?.ei === ei && editingCell?.si === si && editingCell?.field === 'reps';
-        const prevSet    = si > 0 ? exSets[si - 1] : null;
-        const prevText   = prevSet ? `${prevSet.weight > 0 ? prevSet.weight + ' × ' : ''}${prevSet.reps}` : '—';
+        // Previous = same set number from the LAST workout (frozen, not live)
+        const prevSetData = prevSets[si];
+        const prevText    = prevSetData
+          ? `${prevSetData.weight > 0 ? prevSetData.weight + ' × ' : ''}${prevSetData.reps}`
+          : '—';
 
         return (
           <SwipeableSetRow key={si} isLast={si === exSets.length - 1} onDelete={() => onDeleteSet(si)}>
