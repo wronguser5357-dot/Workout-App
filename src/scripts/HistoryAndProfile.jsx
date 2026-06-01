@@ -238,6 +238,8 @@ function ProfileScreen({ weights, onUpdateWeight, onResetOnboarding, onDeleteAll
   const [editingField,  setEditingField]  = useState(null); // which profile field is open
   const [editingWeight, setEditingWeight] = useState(null); // which weight row is open
   const [weightVal,     setWeightVal]     = useState(0);
+  const [backupMsg,     setBackupMsg]     = useState('');
+  const fileInputRef = useRef(null);
 
   // Live profile state — reads from localStorage, writes back on save
   const [profile, setProfile] = useState(() => {
@@ -249,6 +251,74 @@ function ProfileScreen({ weights, onUpdateWeight, onResetOnboarding, onDeleteAll
     setProfile(next);
     localStorage.setItem('wapp_profile', JSON.stringify(next));
     setEditingField(null);
+  }
+
+  async function handleExportBackup() {
+    const data = {};
+    WAPP_STORAGE_KEYS.forEach(key => {
+      const value = localStorage.getItem(key);
+      if (value !== null) data[key] = value;
+    });
+
+    const backup = {
+      app: 'Workout',
+      version: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      data,
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const filename = `workout-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const blob = new Blob([json], { type: 'application/json' });
+    const file = new File([blob], filename, { type: 'application/json' });
+
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Workout backup' });
+        setBackupMsg('Backup exported.');
+        return;
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setBackupMsg('Backup downloaded.');
+  }
+
+  function handleImportBackup(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        const data = parsed?.data && typeof parsed.data === 'object' ? parsed.data : parsed;
+        const hasKnownKeys = WAPP_STORAGE_KEYS.some(key => Object.prototype.hasOwnProperty.call(data, key));
+        if (!hasKnownKeys) throw new Error('Backup does not include workout data.');
+        const ok = window.confirm('Import this backup? This replaces the current app data on this device.');
+        if (!ok) return;
+        WAPP_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+        WAPP_STORAGE_KEYS.forEach(key => {
+          if (Object.prototype.hasOwnProperty.call(data, key) && data[key] !== null && data[key] !== undefined) {
+            localStorage.setItem(key, String(data[key]));
+          }
+        });
+        setBackupMsg('Backup imported. Reloading...');
+        window.setTimeout(() => window.location.reload(), 350);
+      } catch (e) {
+        setBackupMsg('Could not import that backup file.');
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.onerror = () => setBackupMsg('Could not read that backup file.');
+    reader.readAsText(file);
   }
 
   const name        = profile.name        || 'Connor';
@@ -478,6 +548,29 @@ function ProfileScreen({ weights, onUpdateWeight, onResetOnboarding, onDeleteAll
       <button onClick={onResetOnboarding} style={{ marginBottom: 24, padding: '10px 16px', borderRadius: 10, background: '#fff', border: '1.5px solid #e8eaed', color: '#6b7280', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
         ↩ Redo full setup
       </button>
+
+      {/* Backup */}
+      <div style={{ background: '#fff', borderRadius: 18, padding: '18px 20px', marginBottom: 18, border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+          <div>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Data backup</p>
+            <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.45 }}>Save or restore your profile, history, weights, weeks, and program edits.</p>
+          </div>
+          <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, flexShrink: 0 }}>{APP_VERSION}</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <button onClick={handleExportBackup}
+            style={{ padding: '12px 10px', borderRadius: 12, background: ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Export backup
+          </button>
+          <button onClick={() => fileInputRef.current?.click()}
+            style={{ padding: '12px 10px', borderRadius: 12, background: '#f3f4f6', border: '1.5px solid #e8eaed', color: '#374151', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Import backup
+          </button>
+        </div>
+        <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={e => handleImportBackup(e.target.files?.[0])} style={{ display: 'none' }} />
+        {backupMsg && <p style={{ fontSize: 12, color: '#6b7280', marginTop: 10 }}>{backupMsg}</p>}
+      </div>
 
       {/* Danger zone */}
       <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24, marginBottom: 40 }}>

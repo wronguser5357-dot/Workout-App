@@ -2,6 +2,7 @@
 // WORKOUT APP — DATA LAYER
 // ============================================================
 
+const APP_VERSION = 'workout-v27';
 const ACCENT = '#478dff';
 
 const DAY_COLORS = { A: '#478dff', B: '#f97316', C: '#0891b2', D: '#7c3aed' };
@@ -158,4 +159,4 @@ function applyProgramSwaps(days, overrides) {
   }));
 }
 
-Object.assign(window, { PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, KEY_LIFT_SLOTS, WAPP_STORAGE_KEYS, SWAP_GROUPS, SWAP_CANDIDATES, applyProgramSwaps });
+Object.assign(window, { APP_VERSION, PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, KEY_LIFT_SLOTS, WAPP_STORAGE_KEYS, SWAP_GROUPS, SWAP_CANDIDATES, applyProgramSwaps });
