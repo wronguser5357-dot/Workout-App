@@ -110,3 +110,65 @@ body {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.5; transform: scale(0.75); }
 }
+
+/* Exercise picker / swap sheet */
+.swap-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.34);
+  z-index: 250;
+  backdrop-filter: blur(3px);
+}
+
+.swap-sheet-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 251;
+  max-height: min(78dvh, 680px);
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -24px 70px rgba(17, 24, 39, 0.24);
+  overflow: hidden;
+  animation: sheetRise 0.34s cubic-bezier(0.34, 1.35, 0.64, 1);
+}
+
+.swap-sheet-list {
+  overflow-y: auto;
+  padding: 0 18px calc(22px + env(safe-area-inset-bottom));
+}
+
+.swap-sheet-list::-webkit-scrollbar { display: none; }
+
+@media (min-height: 860px) and (min-width: 500px) {
+  .swap-sheet-overlay {
+    left: 50%;
+    width: 390px;
+    transform: translateX(-50%);
+    border-radius: 44px;
+  }
+
+  .swap-sheet-panel {
+    left: 50%;
+    width: 390px;
+    right: auto;
+    bottom: calc((100dvh - 844px) / 2);
+    transform: translateX(-50%);
+    border-radius: 24px 24px 44px 44px;
+  }
+}
+
+@keyframes sheetRise {
+  from { transform: translateY(34px); opacity: 0.85; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@media (min-height: 860px) and (min-width: 500px) {
+  @keyframes sheetRise {
+    from { transform: translateX(-50%) translateY(34px); opacity: 0.85; }
+    to   { transform: translateX(-50%) translateY(0); opacity: 1; }
+  }
+}

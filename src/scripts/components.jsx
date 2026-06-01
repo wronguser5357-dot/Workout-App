@@ -103,66 +103,152 @@ function NumStepper({ value, onChange, step = 2.5, min = 0, label, unit = 'lb', 
 // ---- SWAP SHEET (shared by WorkoutScreen + ProgramScreen) ----
 function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', contextLabel = 'Replacing', excludeCurrent = true }) {
   const [custom, setCustom] = useState('');
-  const group      = SWAP_GROUPS[exercise.id];
-  const candidates = (SWAP_CANDIDATES[group] || []).filter(c => !excludeCurrent || c.id !== exercise.id);
-  const trimmed    = custom.trim();
+  const [savedCustom, setSavedCustom] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wapp_custom_exercises') || '[]'); }
+    catch { return []; }
+  });
+  const group   = SWAP_GROUPS[exercise.id];
+  const query   = custom.trim().toLowerCase();
+  const trimmed = custom.trim();
+
+  function uniqueById(list) {
+    const seen = new Set();
+    return list.filter(item => {
+      const key = item.id || item.name;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  const fallbackCandidates = uniqueById(Object.values(SWAP_CANDIDATES).flat());
+  const candidates = uniqueById(group ? (SWAP_CANDIDATES[group] || []) : fallbackCandidates)
+    .filter(c => !excludeCurrent || c.id !== exercise.id)
+    .filter(c => !query || c.name.toLowerCase().includes(query))
+    .slice(0, query ? 8 : 10);
+  const customMatches = savedCustom
+    .filter(c => !excludeCurrent || c.id !== exercise.id)
+    .filter(c => !query || c.name.toLowerCase().includes(query))
+    .slice()
+    .sort((a, b) => (b.lastUsedAt || b.createdAt || 0) - (a.lastUsedAt || a.createdAt || 0))
+    .slice(0, 8);
+
+  function persistCustomExercise(ex) {
+    if (!ex.name || !ex.id.startsWith('custom-')) return ex;
+    const now = Date.now();
+    const existing = savedCustom.find(item => item.id === ex.id);
+    const saved = {
+      ...ex,
+      createdAt: existing?.createdAt || ex.createdAt || now,
+      lastUsedAt: now,
+      uses: (existing?.uses || 0) + 1,
+    };
+    const next = [
+      saved,
+      ...savedCustom.filter(item => item.id !== ex.id),
+    ].slice(0, 60);
+    localStorage.setItem('wapp_custom_exercises', JSON.stringify(next));
+    setSavedCustom(next);
+    return saved;
+  }
+
+  function handlePick(ex) {
+    const picked = ex.id.startsWith('custom-')
+      ? persistCustomExercise(ex)
+      : ex;
+    onSwap({ id: picked.id, name: picked.name });
+  }
 
   function handleCustomSwap() {
     if (!trimmed) return;
-    onSwap({ id: 'custom-' + trimmed.toLowerCase().replace(/\s+/g, '-'), name: trimmed });
+    const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now().toString(36);
+    handlePick({ id: 'custom-' + slug, name: trimmed });
+  }
+
+  function ExerciseOption({ item, source }) {
+    return (
+      <button key={item.id} onClick={() => handlePick(item)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: 14, background: '#fff', border: '1.5px solid #eef1f4', marginBottom: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', boxShadow: '0 1px 2px rgba(17,24,39,0.03)' }}>
+        <span style={{ width: 32, height: 32, borderRadius: 10, background: source === 'custom' ? '#f5f3ff' : color + '14', color: source === 'custom' ? '#7c3aed' : color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {source === 'custom' ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          ) : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5h11M6.5 17.5h11M3 12h18"/></svg>
+          )}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#111827' }}>{item.name}</span>
+          {source === 'custom' && item.createdAt && (
+            <span style={{ display: 'block', fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Added {new Date(item.createdAt).toLocaleDateString()}</span>
+          )}
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    );
   }
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 50 }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '20px 20px 0 0', zIndex: 51, maxHeight: '70%', display: 'flex', flexDirection: 'column', boxShadow: '0 -8px 40px rgba(0,0,0,0.12)' }}>
+      <div onClick={onClose} className="swap-sheet-overlay" />
+      <div className="swap-sheet-panel">
 
         {/* Header */}
-        <div style={{ padding: '12px 20px 0', flexShrink: 0 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e8eaed', margin: '0 auto 16px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>{title}</h3>
-              {contextLabel && <p style={{ fontSize: 12, color: '#9ca3af' }}>{contextLabel}: <span style={{ color: '#374151', fontWeight: 600 }}>{exercise.name}</span></p>}
+        <div style={{ padding: '12px 18px 0', flexShrink: 0, background: 'linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%)' }}>
+          <div style={{ width: 42, height: 5, borderRadius: 999, background: '#e5e7eb', margin: '0 auto 16px' }} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ width: 28, height: 28, borderRadius: 9, background: color + '16', color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h10M7 17h10M4 12h16"/></svg>
+                </span>
+                <h3 style={{ fontSize: 18, fontWeight: 850, color: '#111827' }}>{title}</h3>
+              </div>
+              {contextLabel && <p style={{ fontSize: 12, color: '#9ca3af' }}>{contextLabel}: <span style={{ color: '#374151', fontWeight: 700 }}>{exercise.name}</span></p>}
             </div>
-            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
           </div>
 
           {/* Custom write-in */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <input
               type="text"
-              placeholder="Type a custom exercise…"
+              placeholder="Search or type a custom exercise..."
               value={custom}
               onChange={e => setCustom(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleCustomSwap()}
-              style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${trimmed ? color : '#e8eaed'}`, background: '#fafafa', color: '#111827', fontSize: 14, fontFamily: 'inherit', outline: 'none', transition: 'border-color 0.15s' }}
+              style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${trimmed ? color : '#e8eaed'}`, background: '#fff', color: '#111827', fontSize: 14, fontFamily: 'inherit', outline: 'none', transition: 'border-color 0.15s', boxShadow: trimmed ? `0 0 0 3px ${color}14` : 'none' }}
             />
             <button
               onClick={handleCustomSwap}
               disabled={!trimmed}
-              style={{ padding: '10px 16px', borderRadius: 10, background: trimmed ? color : '#f3f4f6', border: 'none', color: trimmed ? '#fff' : '#9ca3af', fontWeight: 700, fontSize: 13, fontFamily: 'inherit', cursor: trimmed ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0 }}>
+              style={{ padding: '10px 16px', borderRadius: 14, background: trimmed ? color : '#f3f4f6', border: 'none', color: trimmed ? '#fff' : '#9ca3af', fontWeight: 800, fontSize: 13, fontFamily: 'inherit', cursor: trimmed ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0 }}>
               Use
             </button>
           </div>
-
-          {candidates.length > 0 && (
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Suggestions</p>
-          )}
         </div>
 
         {/* Candidates list */}
-        <div style={{ overflowY: 'auto', padding: '0 20px 32px' }}>
-          {candidates.length === 0
-            ? <p style={{ fontSize: 14, color: '#9ca3af', textAlign: 'center', padding: '16px 0' }}>No suggestions — use the box above to enter any exercise.</p>
-            : candidates.map(c => (
-              <button key={c.id} onClick={() => onSwap(c)}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: 12, background: '#f8f9fa', border: '1.5px solid #f0f0f0', marginBottom: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>{c.name}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </button>
-            ))
-          }
+        <div className="swap-sheet-list">
+          {customMatches.length > 0 && (
+            <>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '6px 0 10px' }}>Your custom list</p>
+              {customMatches.map(c => <ExerciseOption key={c.id} item={c} source="custom" />)}
+            </>
+          )}
+
+          {candidates.length > 0 && (
+            <>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', margin: customMatches.length ? '18px 0 10px' : '6px 0 10px' }}>Suggested exercises</p>
+              {candidates.map(c => <ExerciseOption key={c.id} item={c} source="suggested" />)}
+            </>
+          )}
+
+          {customMatches.length === 0 && candidates.length === 0 && (
+            <div style={{ background: '#f8fafc', border: '1.5px dashed #dbe2ea', borderRadius: 16, padding: '18px', textAlign: 'center', marginTop: 8 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: '#374151', marginBottom: 4 }}>No matches yet</p>
+              <p style={{ fontSize: 12, color: '#9ca3af', lineHeight: 1.4 }}>Tap Use to save this as a custom exercise for next time.</p>
+            </div>
+          )}
         </div>
       </div>
     </>

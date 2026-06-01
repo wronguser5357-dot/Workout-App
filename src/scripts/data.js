@@ -2,7 +2,7 @@
 // WORKOUT APP — DATA LAYER
 // ============================================================
 
-const APP_VERSION = 'workout-v27';
+const APP_VERSION = 'workout-v28';
 const ACCENT = '#478dff';
 
 const DAY_COLORS = { A: '#478dff', B: '#f97316', C: '#0891b2', D: '#7c3aed' };
@@ -141,6 +141,7 @@ const WAPP_STORAGE_KEYS = [
   'wapp_day_names',
   'wapp_deletions',
   'wapp_additions',
+  'wapp_custom_exercises',
   'wapp_week',
   'wapp_active_workout',
 ];
