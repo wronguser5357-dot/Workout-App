@@ -72,12 +72,13 @@ function SwipeableExRow({ children, onDelete, editing, isLast }) {
   );
 }
 
-function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, onEditSwap, onRenameDay, onDeleteExercise, currentWeek = 1, weekDone = [], onNextWeek, onPrevWeek }) {
+function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, onEditSwap, onRenameDay, onDeleteExercise, onAddExercise, currentWeek = 1, weekDone = [], onNextWeek, onPrevWeek }) {
   const [expanded, setExpanded]     = useState(null);
   const [editingDay, setEditingDay] = useState(null);   // day.id currently in edit mode
   const [renamingDay, setRenamingDay] = useState(null); // day.id whose name is being edited
   const [renameVal, setRenameVal]   = useState('');
   const [swappingEx, setSwappingEx] = useState(null);   // { dayId, slotIdx, ex }
+  const [addingDay, setAddingDay]   = useState(null);   // day object receiving a new exercise
   const cardRefs = useRef({});
 
   // Scroll the opened card into view after it expands
@@ -93,6 +94,12 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
     if (!swappingEx) return;
     onEditSwap && onEditSwap(swappingEx.dayId, swappingEx.slotIdx, newEx);
     setSwappingEx(null);
+  }
+
+  function handleProgramAdd(newEx) {
+    if (!addingDay) return;
+    onAddExercise && onAddExercise(addingDay.id, newEx);
+    setAddingDay(null);
   }
 
   return (
@@ -205,19 +212,28 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
 
                 {/* Exercises header + Edit/Done toggle */}
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Exercises</span>
-                    <button
-                      onClick={e => { e.stopPropagation(); setEditingDay(editing ? null : day.id); }}
-                      style={{
-                        padding: '4px 12px', borderRadius: 8, border: editing ? 'none' : `1.5px solid ${color}`,
-                        background: editing ? color : 'transparent',
-                        color: editing ? '#fff' : color,
-                        fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                        transition: 'all 0.15s'
-                      }}>
-                      {editing ? 'Done' : 'Edit'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {editing && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setAddingDay(day); }}
+                          style={{ padding: '4px 10px', borderRadius: 8, border: `1.5px solid ${color}`, background: 'transparent', color, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Add
+                        </button>
+                      )}
+                      <button
+                        onClick={e => { e.stopPropagation(); setEditingDay(editing ? null : day.id); }}
+                        style={{
+                          padding: '4px 12px', borderRadius: 8, border: editing ? 'none' : `1.5px solid ${color}`,
+                          background: editing ? color : 'transparent',
+                          color: editing ? '#fff' : color,
+                          fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          transition: 'all 0.15s'
+                        }}>
+                        {editing ? 'Done' : 'Edit'}
+                      </button>
+                    </div>
                   </div>
 
                   {day.exercises.map((ex, i) => (
@@ -286,6 +302,18 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
           onSwap={handleProgramSwap}
           onClose={() => setSwappingEx(null)}
           color={DAY_COLORS[swappingEx.dayId]}
+        />
+      )}
+
+      {addingDay && (
+        <SwapSheet
+          exercise={addingDay.exercises[0] || { id: 'custom-new', name: 'New exercise' }}
+          onSwap={handleProgramAdd}
+          onClose={() => setAddingDay(null)}
+          color={DAY_COLORS[addingDay.id]}
+          title="Add exercise"
+          contextLabel={null}
+          excludeCurrent={false}
         />
       )}
     </div>

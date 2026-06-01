@@ -130,6 +130,20 @@ const KEY_LIFT_SLOTS = [
   { histKey: 'Barbell OHP',   dayId: 'B', slotIdx: 3 },
 ];
 
+const WAPP_STORAGE_KEYS = [
+  'wapp_profile',
+  'wapp_history',
+  'wapp_weights',
+  'wapp_tab',
+  'wapp_tweaks',
+  'wapp_program_swaps',
+  'wapp_day_names',
+  'wapp_deletions',
+  'wapp_additions',
+  'wapp_week',
+  'wapp_active_workout',
+];
+
 // Applies saved exercise overrides to PROGRAM_DAYS.
 // overrides format: { "C:2": { id: "lat-pulldown", name: "Lat Pulldown (neutral)" }, ... }
 // where the key is dayId:slotIndex (position in the exercises array).
@@ -144,4 +158,4 @@ function applyProgramSwaps(days, overrides) {
   }));
 }
 
-Object.assign(window, { PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, KEY_LIFT_SLOTS, SWAP_GROUPS, SWAP_CANDIDATES, applyProgramSwaps });
+Object.assign(window, { PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, KEY_LIFT_SLOTS, WAPP_STORAGE_KEYS, SWAP_GROUPS, SWAP_CANDIDATES, applyProgramSwaps });

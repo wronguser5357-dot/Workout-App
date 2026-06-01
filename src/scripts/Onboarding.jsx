@@ -194,11 +194,7 @@ function OnboardingFlow({ onComplete, onStartFresh }) {
 }
 
 function StepWelcome({ onStart, onStartFresh }) {
-  const hasExistingData = !!(
-    localStorage.getItem('wapp_history') ||
-    localStorage.getItem('wapp_weights') ||
-    localStorage.getItem('wapp_tweaks')
-  );
+  const hasExistingData = WAPP_STORAGE_KEYS.some(key => localStorage.getItem(key));
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100%', padding: '0 0 32px' }}>

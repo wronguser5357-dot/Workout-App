@@ -20,13 +20,25 @@ function HomeScreen({ history, onStartWorkout, weights, programDays = PROGRAM_DA
 
   const color = DAY_COLORS[nextDay.id];
 
+  function realSeriesForExercise(ex, fallbackKey) {
+    const series = history
+      .filter(session => session.exerciseLog)
+      .map(session => {
+        const log = session.exerciseLog.find(e => e.id === ex?.id || e.name === ex?.name);
+        if (!log?.sets?.length) return null;
+        return Math.max(...log.sets.map(s => Number(s.weight) || 0));
+      })
+      .filter(v => v !== null);
+    return series.length >= 2 ? series : (LIFT_HISTORY[fallbackKey] || []);
+  }
+
   // Build key lifts from program slots so swaps auto-update the displayed name
   const keyLifts = KEY_LIFT_SLOTS.map(slot => {
     const day = programDays.find(d => d.id === slot.dayId);
     const ex  = day?.exercises[slot.slotIdx];
     return {
       name: ex?.name || slot.histKey,
-      data: LIFT_HISTORY[slot.histKey] || [],
+      data: realSeriesForExercise(ex, slot.histKey),
     };
   }).filter(kl => kl.data.length > 0);
 

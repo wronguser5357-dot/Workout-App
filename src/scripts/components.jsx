@@ -101,10 +101,10 @@ function NumStepper({ value, onChange, step = 2.5, min = 0, label, unit = 'lb', 
 }
 
 // ---- SWAP SHEET (shared by WorkoutScreen + ProgramScreen) ----
-function SwapSheet({ exercise, onSwap, onClose, color }) {
+function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', contextLabel = 'Replacing', excludeCurrent = true }) {
   const [custom, setCustom] = useState('');
   const group      = SWAP_GROUPS[exercise.id];
-  const candidates = (SWAP_CANDIDATES[group] || []).filter(c => c.id !== exercise.id);
+  const candidates = (SWAP_CANDIDATES[group] || []).filter(c => !excludeCurrent || c.id !== exercise.id);
   const trimmed    = custom.trim();
 
   function handleCustomSwap() {
@@ -122,8 +122,8 @@ function SwapSheet({ exercise, onSwap, onClose, color }) {
           <div style={{ width: 36, height: 4, borderRadius: 2, background: '#e8eaed', margin: '0 auto 16px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>Swap exercise</h3>
-              <p style={{ fontSize: 12, color: '#9ca3af' }}>Replacing: <span style={{ color: '#374151', fontWeight: 600 }}>{exercise.name}</span></p>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>{title}</h3>
+              {contextLabel && <p style={{ fontSize: 12, color: '#9ca3af' }}>{contextLabel}: <span style={{ color: '#374151', fontWeight: 600 }}>{exercise.name}</span></p>}
             </div>
             <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           </div>

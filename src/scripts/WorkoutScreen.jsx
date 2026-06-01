@@ -2,7 +2,7 @@
 // ACTIVE WORKOUT SCREEN
 // ============================================================
 
-function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSwap, workoutStartTime, prevLog = {} }) {
+function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSwap, workoutStartTime, workoutInstanceId, prevLog = {}, prBaselines = {} }) {
   const color = DAY_COLORS[day.id];
 
   // Restore from localStorage if there's a saved workout for this day
@@ -10,7 +10,7 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
   const [savedWorkout] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('wapp_active_workout') || 'null');
-      return s?.day?.id === day.id ? s : null;
+      return s?.instanceId && s.instanceId === workoutInstanceId ? s : null;
     } catch { return null; }
   });
 
@@ -31,6 +31,7 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
   const [phase, setPhase]                       = useState('working');
   const [editingCell, setEditingCell]           = useState(null);
   const [cancelConfirm, setCancelConfirm]       = useState(false);
+  const [undoToast, setUndoToast]               = useState(null);
   // startRef: prefer saved time (crash recovery), then prop from App (minimize/resume), then now
   const startRef = useRef(savedWorkout?.startTime || workoutStartTime || Date.now());
   const [elapsed, setElapsed] = useState(Math.floor((Date.now() - startRef.current) / 1000));
@@ -42,6 +43,7 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
       localStorage.setItem('wapp_active_workout', JSON.stringify({
         day, sets, sessionExercises, swappedIds, savedToPlans,
         startTime: startRef.current,
+        instanceId: workoutInstanceId,
       }));
     } catch(e) {}
   }, [sets, sessionExercises, swappedIds, savedToPlans, phase]);
@@ -100,12 +102,23 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
 
   function deleteSet(ei, si) {
     if (sets[ei].length <= 1) return; // keep at least 1 set
+    const deletedSet = sets[ei][si];
     setSets(prev => {
       const next = prev.map(e => e.map(s => ({ ...s })));
       next[ei] = next[ei].filter((_, i) => i !== si);
       return next;
     });
     setSessionExercises(prev => prev.map((ex, i) => i === ei ? { ...ex, sets: ex.sets - 1 } : ex));
+    const id = Date.now();
+    setUndoToast({ id, message: 'Set deleted', onUndo: () => {
+      setSets(prev => {
+        const next = prev.map(e => e.map(s => ({ ...s })));
+        next[ei] = [...next[ei].slice(0, si), deletedSet, ...next[ei].slice(si)];
+        return next;
+      });
+      setSessionExercises(prev => prev.map((ex, i) => i === ei ? { ...ex, sets: ex.sets + 1 } : ex));
+    }});
+    setTimeout(() => setUndoToast(cur => cur?.id === id ? null : cur), 4500);
   }
 
   function handleSwap(newEx) {
@@ -178,6 +191,12 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
       if (!prog || prog.increase === 0) return null;
       return { name: ex.name, from: prog.topWeight, to: prog.nextWeight };
     }).filter(Boolean);
+    const prs = sessionExercises.map((ex, ei) => {
+      const prog = calcProgression(ex, ei);
+      if (!prog) return null;
+      const priorBest = prBaselines[ex.id] ?? prBaselines[ex.name] ?? 0;
+      return prog.topWeight > priorBest ? { name: ex.name, weight: prog.topWeight, priorBest } : null;
+    }).filter(Boolean);
 
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f0f2f5', overflowY: 'auto', padding: '40px 20px 32px' }}>
@@ -196,6 +215,18 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
               <div key={s.name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 14, color: '#374151' }}>{s.name}</span>
                 <span style={{ fontSize: 14, fontWeight: 700 }}><span style={{ color: '#9ca3af' }}>{s.from} lb</span> → <span style={{ color: ACCENT }}>{s.to} lb</span></span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {prs.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', marginBottom: 14, border: '1px solid #f0f0f0' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#f97316', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 }}>Personal records</p>
+            {prs.map(pr => (
+              <div key={pr.name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 14, color: '#374151' }}>{pr.name}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#f97316' }}>{pr.weight > 0 ? `${pr.weight} lb` : 'BW'}</span>
               </div>
             ))}
           </div>
@@ -339,6 +370,18 @@ function WorkoutScreen({ day, weights, onComplete, onClose, onMinimize, onSaveSw
           onClose={() => setSwappingExIdx(null)}
           color={color}
         />
+      )}
+
+      {undoToast && (
+        <div style={{ position: 'absolute', left: 16, right: 16, bottom: 18, zIndex: 70 }}>
+          <div style={{ background: '#111827', color: '#fff', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 12px 34px rgba(0,0,0,0.22)' }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{undoToast.message}</span>
+            <button onClick={() => { const fn = undoToast.onUndo; setUndoToast(null); fn && fn(); }}
+              style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: 9, padding: '7px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Undo
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

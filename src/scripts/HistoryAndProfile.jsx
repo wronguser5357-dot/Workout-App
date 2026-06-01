@@ -73,7 +73,23 @@ function SwipeableSessionRow({ children, onDelete, isLast }) {
 function HistoryScreen({ history, onDeleteSession }) {
   const [selectedLift, setSelectedLift] = useState('Deadlift');
   const [expandedSession, setExpandedSession] = useState(null);
-  const liftNames = Object.keys(LIFT_HISTORY);
+  const realLiftSeries = history.reduce((acc, session) => {
+    (session.exerciseLog || []).forEach(ex => {
+      if (!ex.sets?.length) return;
+      const top = Math.max(...ex.sets.map(s => Number(s.weight) || 0));
+      if (!acc[ex.name]) acc[ex.name] = [];
+      acc[ex.name].push(top);
+    });
+    return acc;
+  }, {});
+  const liftSeries = { ...LIFT_HISTORY, ...Object.fromEntries(
+    Object.entries(realLiftSeries).filter(([, values]) => values.length >= 2)
+  ) };
+  const liftNames = Object.keys(liftSeries);
+
+  useEffect(() => {
+    if (!liftSeries[selectedLift] && liftNames.length) setSelectedLift(liftNames[0]);
+  }, [history]);
 
   const formatDate   = (ts) => new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const formatDayAgo = (ts) => {
@@ -84,9 +100,12 @@ function HistoryScreen({ history, onDeleteSession }) {
   };
   const formatTime = (ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-  const chartData = LIFT_HISTORY[selectedLift];
-  const min = Math.min(...chartData) * 0.96;
-  const max = Math.max(...chartData) * 1.02;
+  const chartData = liftSeries[selectedLift] || [0, 0];
+  const chartDelta = chartData[chartData.length - 1] - chartData[0];
+  const rawMin = Math.min(...chartData);
+  const rawMax = Math.max(...chartData);
+  const min = rawMin === rawMax ? rawMin - 1 : rawMin * 0.96;
+  const max = rawMin === rawMax ? rawMax + 1 : rawMax * 1.02;
   const W = 300, H = 100;
   const pts = chartData.map((v, i) => [
     (i / (chartData.length - 1)) * W,
@@ -114,7 +133,7 @@ function HistoryScreen({ history, onDeleteSession }) {
           <span style={{ fontSize: 36, fontWeight: 800, color: '#111827' }}>{chartData[chartData.length - 1]}</span>
           <span style={{ fontSize: 14, color: '#9ca3af' }}>lb</span>
           <span style={{ fontSize: 13, color: '#478dff', fontWeight: 700, background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>
-            +{chartData[chartData.length - 1] - chartData[0]} over 8 wks
+            {chartDelta >= 0 ? '+' : ''}{chartDelta} over {chartData.length} sessions
           </span>
         </div>
 
@@ -215,7 +234,7 @@ function HistoryScreen({ history, onDeleteSession }) {
 // PROFILE SCREEN
 // ============================================================
 
-function ProfileScreen({ weights, onUpdateWeight, onResetOnboarding }) {
+function ProfileScreen({ weights, onUpdateWeight, onResetOnboarding, onDeleteAll }) {
   const [editingField,  setEditingField]  = useState(null); // which profile field is open
   const [editingWeight, setEditingWeight] = useState(null); // which weight row is open
   const [weightVal,     setWeightVal]     = useState(0);
@@ -463,19 +482,17 @@ function ProfileScreen({ weights, onUpdateWeight, onResetOnboarding }) {
       {/* Danger zone */}
       <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24, marginBottom: 40 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 }}>Danger zone</p>
-        <DeleteAllButton onResetOnboarding={onResetOnboarding} />
+        <DeleteAllButton onDeleteAll={onDeleteAll} />
       </div>
     </div>
   );
 }
 
-function DeleteAllButton({ onResetOnboarding }) {
+function DeleteAllButton({ onDeleteAll }) {
   const [confirming, setConfirming] = useState(false);
 
   function handleDelete() {
-    const keys = ['wapp_profile','wapp_history','wapp_weights','wapp_tab','wapp_tweaks','wapp_program_swaps','wapp_day_names'];
-    keys.forEach(k => localStorage.removeItem(k));
-    onResetOnboarding();
+    onDeleteAll && onDeleteAll();
   }
 
   if (confirming) {
