@@ -108,8 +108,18 @@ function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', 
     catch { return []; }
   });
   const group   = SWAP_GROUPS[exercise.id];
+  const groupMeta = SWAP_CATEGORY_META[group];
   const query   = custom.trim().toLowerCase();
   const trimmed = custom.trim();
+
+  function withCategory(item, category = SWAP_GROUPS[item.id] || group) {
+    return {
+      ...item,
+      category,
+      categoryLabel: SWAP_CATEGORY_META[category]?.label || 'Exercise',
+      categoryShort: SWAP_CATEGORY_META[category]?.shortLabel || 'Exercise',
+    };
+  }
 
   function uniqueById(list) {
     const seen = new Set();
@@ -121,14 +131,16 @@ function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', 
     });
   }
 
-  const fallbackCandidates = uniqueById(Object.values(SWAP_CANDIDATES).flat());
-  const candidates = uniqueById(group ? (SWAP_CANDIDATES[group] || []) : fallbackCandidates)
+  const fallbackCandidates = uniqueById(Object.entries(SWAP_CANDIDATES).flatMap(([cat, list]) => list.map(item => withCategory(item, cat))));
+  const candidates = uniqueById(group ? (SWAP_CANDIDATES[group] || []).map(item => withCategory(item, group)) : fallbackCandidates)
     .filter(c => !excludeCurrent || c.id !== exercise.id)
     .filter(c => !query || c.name.toLowerCase().includes(query))
     .slice(0, query ? 8 : 10);
   const customMatches = savedCustom
     .filter(c => !excludeCurrent || c.id !== exercise.id)
+    .filter(c => query || !group || !c.category || c.category === group)
     .filter(c => !query || c.name.toLowerCase().includes(query))
+    .map(c => withCategory(c, c.category || group))
     .slice()
     .sort((a, b) => (b.lastUsedAt || b.createdAt || 0) - (a.lastUsedAt || a.createdAt || 0))
     .slice(0, 8);
@@ -139,6 +151,8 @@ function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', 
     const existing = savedCustom.find(item => item.id === ex.id);
     const saved = {
       ...ex,
+      category: ex.category || group || 'custom',
+      categoryLabel: SWAP_CATEGORY_META[ex.category || group]?.label || 'Custom',
       createdAt: existing?.createdAt || ex.createdAt || now,
       lastUsedAt: now,
       uses: (existing?.uses || 0) + 1,
@@ -156,13 +170,13 @@ function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', 
     const picked = ex.id.startsWith('custom-')
       ? persistCustomExercise(ex)
       : ex;
-    onSwap({ id: picked.id, name: picked.name });
+    onSwap({ id: picked.id, name: picked.name, category: picked.category });
   }
 
   function handleCustomSwap() {
     if (!trimmed) return;
     const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now().toString(36);
-    handlePick({ id: 'custom-' + slug, name: trimmed });
+    handlePick(withCategory({ id: 'custom-' + slug, name: trimmed }, group));
   }
 
   function ExerciseOption({ item, source }) {
@@ -178,9 +192,14 @@ function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', 
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#111827' }}>{item.name}</span>
-          {source === 'custom' && item.createdAt && (
-            <span style={{ display: 'block', fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Added {new Date(item.createdAt).toLocaleDateString()}</span>
-          )}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: 999, background: source === 'custom' ? '#f5f3ff' : '#f8fafc', color: source === 'custom' ? '#7c3aed' : '#64748b', fontSize: 10, fontWeight: 800, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              {item.categoryShort}
+            </span>
+            {source === 'custom' && item.createdAt && (
+              <span style={{ fontSize: 11, color: '#9ca3af' }}>Added {new Date(item.createdAt).toLocaleDateString()}</span>
+            )}
+          </span>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </button>
@@ -204,6 +223,11 @@ function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', 
                 <h3 style={{ fontSize: 18, fontWeight: 850, color: '#111827' }}>{title}</h3>
               </div>
               {contextLabel && <p style={{ fontSize: 12, color: '#9ca3af' }}>{contextLabel}: <span style={{ color: '#374151', fontWeight: 700 }}>{exercise.name}</span></p>}
+              {groupMeta && (
+                <p style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '5px 9px', borderRadius: 999, background: color + '12', color, fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  {groupMeta.label}
+                </p>
+              )}
             </div>
             <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: '50%', background: '#f3f4f6', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
           </div>
@@ -231,14 +255,14 @@ function SwapSheet({ exercise, onSwap, onClose, color, title = 'Swap exercise', 
         <div className="swap-sheet-list">
           {customMatches.length > 0 && (
             <>
-              <p style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '6px 0 10px' }}>Your custom list</p>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '6px 0 10px' }}>{groupMeta ? `Your custom ${groupMeta.shortLabel.toLowerCase()} list` : 'Your custom list'}</p>
               {customMatches.map(c => <ExerciseOption key={c.id} item={c} source="custom" />)}
             </>
           )}
 
           {candidates.length > 0 && (
             <>
-              <p style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', margin: customMatches.length ? '18px 0 10px' : '6px 0 10px' }}>Suggested exercises</p>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', margin: customMatches.length ? '18px 0 10px' : '6px 0 10px' }}>{groupMeta ? `Suggested ${groupMeta.shortLabel.toLowerCase()} exercises` : 'Suggested exercises'}</p>
               {candidates.map(c => <ExerciseOption key={c.id} item={c} source="suggested" />)}
             </>
           )}

@@ -2,7 +2,7 @@
 // WORKOUT APP — DATA LAYER
 // ============================================================
 
-const APP_VERSION = 'workout-v28';
+const APP_VERSION = 'workout-v29';
 const ACCENT = '#478dff';
 
 const DAY_COLORS = { A: '#478dff', B: '#f97316', C: '#0891b2', D: '#7c3aed' };
@@ -95,12 +95,13 @@ const SWAP_GROUPS = {
   'leg-press': 'quad', 'bulgarian-split': 'quad', 'lunges': 'quad',
   'step-ups': 'quad', 'goblet-squat': 'quad', 'leg-extension': 'quad',
   'hack-squat': 'quad', 'back-squat': 'quad',
-  'deadlift': 'posterior', 'rdl': 'posterior', 'hip-thrust': 'posterior',
+  'deadlift': 'posterior', 'trap-bar-deadlift': 'posterior', 'rdl': 'posterior', 'hip-thrust': 'posterior',
   'leg-curl': 'posterior', 'nordic': 'posterior', 'good-morning': 'posterior',
   'machine-chest': 'h-push', 'db-bench': 'h-push', 'incline-db': 'h-push',
-  'cable-fly': 'h-push', 'pec-dec': 'h-push', 'barbell-bench': 'h-push',
+  'cable-fly': 'h-push', 'pec-dec': 'h-push', 'barbell-bench': 'h-push', 'push-up': 'h-push',
   'barbell-ohp': 'v-push', 'seated-press': 'v-push', 'db-lateral': 'v-push',
-  'cable-lateral': 'v-push', 'face-pull': 'v-push', 'rear-delt-fly': 'v-push',
+  'cable-lateral': 'v-push', 'db-shoulder-press': 'v-push', 'arnold-press': 'v-push',
+  'face-pull': 'rear-delt', 'rear-delt-fly': 'rear-delt', 'reverse-pec-dec': 'rear-delt',
   'barbell-row': 'h-pull', 'db-row': 'h-pull', 'cable-row': 'h-pull',
   'machine-row': 'h-pull', 'chest-row': 'h-pull',
   'pullup': 'v-pull', 'chinup': 'v-pull', 'lat-pulldown': 'v-pull',
@@ -110,12 +111,66 @@ const SWAP_GROUPS = {
   'calf-raise': 'calves',
 };
 
+const SWAP_CATEGORY_META = {
+  quad: {
+    label: 'Lower / Quad',
+    shortLabel: 'Quad',
+    movement: 'Knee-dominant lower body',
+  },
+  posterior: {
+    label: 'Lower / Posterior',
+    shortLabel: 'Posterior',
+    movement: 'Hinge, hamstrings, glutes',
+  },
+  'h-push': {
+    label: 'Push / Chest',
+    shortLabel: 'Chest push',
+    movement: 'Horizontal push',
+  },
+  'v-push': {
+    label: 'Push / Shoulders',
+    shortLabel: 'Shoulder push',
+    movement: 'Vertical push',
+  },
+  'h-pull': {
+    label: 'Pull / Row',
+    shortLabel: 'Row',
+    movement: 'Horizontal pull',
+  },
+  'rear-delt': {
+    label: 'Pull / Rear Delt',
+    shortLabel: 'Rear delt',
+    movement: 'Rear delt and upper-back accessory',
+  },
+  'v-pull': {
+    label: 'Pull / Vertical',
+    shortLabel: 'Vertical pull',
+    movement: 'Pull-up and pulldown pattern',
+  },
+  biceps: {
+    label: 'Arms / Biceps',
+    shortLabel: 'Biceps',
+    movement: 'Elbow flexion',
+  },
+  triceps: {
+    label: 'Arms / Triceps',
+    shortLabel: 'Triceps',
+    movement: 'Elbow extension',
+  },
+  calves: {
+    label: 'Lower / Calves',
+    shortLabel: 'Calves',
+    movement: 'Calf raise pattern',
+  },
+};
+
 const SWAP_CANDIDATES = {
-  quad:      [{ id: 'leg-press', name: 'Leg Press' }, { id: 'bulgarian-split', name: 'Bulgarian Split Squat' }, { id: 'lunges', name: 'DB Lunges' }, { id: 'goblet-squat', name: 'Goblet Squat' }, { id: 'hack-squat', name: 'Hack Squat' }, { id: 'step-ups', name: 'Step Ups' }, { id: 'leg-extension', name: 'Leg Extension' }],
-  posterior: [{ id: 'deadlift', name: 'Conventional Deadlift' }, { id: 'rdl', name: 'Romanian Deadlift' }, { id: 'hip-thrust', name: 'Machine Hip Thrust' }, { id: 'leg-curl', name: 'Seated Leg Curl' }, { id: 'nordic', name: 'Nordic Curl' }, { id: 'good-morning', name: 'Good Morning' }],
-  'h-push':  [{ id: 'machine-chest', name: 'Machine Chest Press' }, { id: 'db-bench', name: 'DB Bench Press' }, { id: 'incline-db', name: 'Incline DB Press' }, { id: 'cable-fly', name: 'Cable Fly' }, { id: 'pec-dec', name: 'Pec Dec' }, { id: 'barbell-bench', name: 'Barbell Bench Press' }],
-  'v-push':  [{ id: 'barbell-ohp', name: 'Barbell OHP' }, { id: 'seated-press', name: 'Seated Machine Press' }, { id: 'cable-lateral', name: 'Cable Lateral Raise' }, { id: 'db-lateral', name: 'DB Lateral Raise' }, { id: 'face-pull', name: 'Face Pull' }, { id: 'rear-delt-fly', name: 'Rear Delt Fly' }],
+  quad:      [{ id: 'leg-press', name: 'Leg Press' }, { id: 'back-squat', name: 'Barbell Back Squat' }, { id: 'bulgarian-split', name: 'Bulgarian Split Squat' }, { id: 'lunges', name: 'DB Lunges' }, { id: 'goblet-squat', name: 'Goblet Squat' }, { id: 'hack-squat', name: 'Hack Squat' }, { id: 'step-ups', name: 'Step Ups' }, { id: 'leg-extension', name: 'Leg Extension' }],
+  posterior: [{ id: 'deadlift', name: 'Conventional Deadlift' }, { id: 'trap-bar-deadlift', name: 'Trap Bar Deadlift' }, { id: 'rdl', name: 'Romanian Deadlift' }, { id: 'hip-thrust', name: 'Machine Hip Thrust' }, { id: 'leg-curl', name: 'Seated Leg Curl' }, { id: 'nordic', name: 'Nordic Curl' }, { id: 'good-morning', name: 'Good Morning' }],
+  'h-push':  [{ id: 'machine-chest', name: 'Machine Chest Press' }, { id: 'barbell-bench', name: 'Barbell Bench Press' }, { id: 'db-bench', name: 'DB Bench Press' }, { id: 'incline-db', name: 'Incline DB Press' }, { id: 'push-up', name: 'Push Up' }, { id: 'cable-fly', name: 'Cable Fly' }, { id: 'pec-dec', name: 'Pec Dec' }],
+  'v-push':  [{ id: 'barbell-ohp', name: 'Barbell OHP' }, { id: 'seated-press', name: 'Seated Machine Press' }, { id: 'db-shoulder-press', name: 'DB Shoulder Press' }, { id: 'arnold-press', name: 'Arnold Press' }, { id: 'cable-lateral', name: 'Cable Lateral Raise' }, { id: 'db-lateral', name: 'DB Lateral Raise' }],
   'h-pull':  [{ id: 'barbell-row', name: 'Barbell Row' }, { id: 'db-row', name: 'DB Row' }, { id: 'cable-row', name: 'Seated Cable Row' }, { id: 'machine-row', name: 'Machine Row' }, { id: 'chest-row', name: 'Chest Supported Row' }],
+  'rear-delt': [{ id: 'face-pull', name: 'Face Pull' }, { id: 'rear-delt-fly', name: 'Rear Delt Fly' }, { id: 'reverse-pec-dec', name: 'Reverse Pec Dec' }],
   'v-pull':  [{ id: 'pullup', name: 'Pull Ups' }, { id: 'chinup', name: 'Chin Ups' }, { id: 'lat-pulldown', name: 'Lat Pulldown (bar)' }, { id: 'neutral-pull', name: 'Lat Pulldown (neutral)' }, { id: 'str-pulldown', name: 'Straight Arm Pulldown' }],
   biceps:    [{ id: 'barbell-curl', name: 'Barbell Curl' }, { id: 'hammer-curl', name: 'Hammer Curl' }, { id: 'incline-db-curl', name: 'Incline DB Curl' }],
   triceps:   [{ id: 'tricep-pushdown', name: 'Tricep Pushdown' }, { id: 'oh-tricep', name: 'OH Tricep Extension' }, { id: 'dips', name: 'Dips' }],
@@ -160,4 +215,4 @@ function applyProgramSwaps(days, overrides) {
   }));
 }
 
-Object.assign(window, { APP_VERSION, PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, KEY_LIFT_SLOTS, WAPP_STORAGE_KEYS, SWAP_GROUPS, SWAP_CANDIDATES, applyProgramSwaps });
+Object.assign(window, { APP_VERSION, PROGRAM_DAYS, DEFAULT_WEIGHTS, DAY_COLORS, ACCENT, makeSeedHistory, LIFT_HISTORY, KEY_LIFT_SLOTS, WAPP_STORAGE_KEYS, SWAP_GROUPS, SWAP_CATEGORY_META, SWAP_CANDIDATES, applyProgramSwaps });

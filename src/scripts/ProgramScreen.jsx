@@ -307,7 +307,7 @@ function ProgramScreen({ onStartWorkout, history, programDays = PROGRAM_DAYS, on
 
       {addingDay && (
         <SwapSheet
-          exercise={addingDay.exercises[0] || { id: 'custom-new', name: 'New exercise' }}
+          exercise={{ id: 'all-exercises', name: addingDay.name }}
           onSwap={handleProgramAdd}
           onClose={() => setAddingDay(null)}
           color={DAY_COLORS[addingDay.id]}
